@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { PACK_STATUS, translate } from '@shared/i18n';
 import type { LangCode } from '@shared/types';
 import { en } from '@shared/i18n/en';
+import { HOSTED_BANNER } from '@shared/hosted';
 import { Icon } from './ui';
 
 /** Banners that must be visible on every screen. */
@@ -14,6 +15,15 @@ export function SimulationBanner({ lang = 'en' }: { lang?: LangCode }) {
           {translate(lang, 'simBanner')}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** Conspicuous notice when the service runs as the public hosted demo. */
+export function HostedBanner() {
+  return (
+    <div className="hosted-banner" role="note" data-testid="hosted-banner">
+      <strong>{HOSTED_BANNER}</strong>
     </div>
   );
 }

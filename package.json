@@ -26,7 +26,11 @@
     "evidence:bytes": "tsx scripts/measure-bytes.ts",
     "evidence:contrast": "tsx scripts/contrast.ts",
     "docs:capabilities": "tsx scripts/capabilities-doc.ts",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm test"
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "build:server": "vite build && tsx scripts/build-hosted.ts server",
+    "build:vercel": "vite build && tsx scripts/build-hosted.ts vercel",
+    "start:hosted": "RHR_HOSTED=1 RHR_HOST=0.0.0.0 node dist-server/server.mjs",
+    "start:vercel-sim": "tsx scripts/vercel-sim.ts"
   },
   "dependencies": {
     "react": "^19.3.0",
@@ -41,6 +45,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "concurrently": "^10.0.5",
+    "esbuild": "^0.28.2",
     "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",

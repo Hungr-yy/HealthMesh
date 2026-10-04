@@ -64,10 +64,15 @@ export class Router {
     return null;
   }
 
-  createServer(staticDir: string | null): http.Server {
-    return http.createServer((rq, rs) => {
+  /** A plain (req, res) handler: used by the standalone server and by the Vercel function. */
+  handler(staticDir: string | null): (rq: http.IncomingMessage, rs: http.ServerResponse) => void {
+    return (rq, rs) => {
       void this.handle(rq, rs, staticDir);
-    });
+    };
+  }
+
+  createServer(staticDir: string | null): http.Server {
+    return http.createServer(this.handler(staticDir));
   }
 
   private async handle(
@@ -132,6 +137,18 @@ function send(rs: http.ServerResponse, status: number, body: unknown): void {
 function readBody(rq: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     if (rq.method === 'GET' || rq.method === 'HEAD') return resolve(undefined);
+    // Some serverless hosts pre-parse the body and consume the stream; use theirs if present.
+    const pre = (rq as { body?: unknown }).body;
+    if (pre !== undefined) {
+      if (typeof pre === 'string') {
+        try {
+          return resolve(pre === '' ? undefined : JSON.parse(pre));
+        } catch {
+          return reject(new ApiError('bad_request', 'Body is not valid JSON', 400));
+        }
+      }
+      return resolve(pre);
+    }
     const chunks: Buffer[] = [];
     let size = 0;
     rq.on('data', (c: Buffer) => {

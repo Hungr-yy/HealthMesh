@@ -1,3 +1,4 @@
+import { HOSTED_BANNER, isHosted } from './hosted';
 import { principalFromBearer, staffRef, DEMO_TOKENS } from './auth';
 import type { Engine } from './engine';
 import { Router, type Req } from './http';
@@ -20,6 +21,11 @@ export function buildRouter(engine: Engine): Router {
   const r = new Router();
 
   r.add('GET', '/api/health', () => ({ ok: true, simulated: true }));
+  // Deployment mode, so the UI can show the hosted-demo banner. No secrets, no state.
+  r.add('GET', '/api/mode', () => ({
+    hosted: isHosted(),
+    banner: isHosted() ? HOSTED_BANNER : null,
+  }));
   r.add('GET', '/api/node/status', () => engine.nodeStatus());
   r.add('GET', '/api/node/health', () => engine.nodeHealth());
   r.add('GET', '/api/permissions', () => ({ permissions: PERMISSIONS, roles: ROLE_PERMISSIONS }));

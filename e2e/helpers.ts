@@ -42,8 +42,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 
-export const SHOT_DIR = path.resolve('docs/screenshots');
-export const AXE_FILE = path.resolve('docs/axe-results.json');
+/** Evidence output root. Default `docs`; hosted-target runs set RHR_E2E_OUT so they never overwrite it. */
+export const OUT_DIR = path.resolve(process.env.RHR_E2E_OUT ?? 'docs');
+export const SHOT_DIR = path.join(OUT_DIR, 'screenshots');
+export const AXE_FILE = path.join(OUT_DIR, 'axe-results.json');
 
 export interface Viewport {
   name: 'mobile-320' | 'desktop-1280';

@@ -506,3 +506,11 @@ details.card > summary {
   cursor: pointer;
   font-weight: 600;
 }
+.hosted-banner {
+  background: #fff3c4;
+  color: #3b2a00;
+  border-bottom: 3px solid #b45309;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { HealthMessagingClient } from '@shared/client';
 import { DIRECTION } from '@shared/i18n';
 import type { LangCode } from '@shared/types';
-import { SimulationBanner, UnreviewedBanner } from './components/Chrome';
+import { HostedBanner, SimulationBanner, UnreviewedBanner } from './components/Chrome';
 import { AnnounceProvider, Button } from './components/ui';
 import { FixtureClient } from './lib/fixtureClient';
 import { HttpClient } from './lib/httpClient';
@@ -49,6 +49,20 @@ export function App() {
             : 'patient';
   const lang: LangCode | null = area === 'patient' ? patientLang : null;
 
+  // Hosted demo mode is a property of the deployment; ask the service once.
+  const [hosted, setHosted] = useState(false);
+  useEffect(() => {
+    if (useFixtures) return;
+    let live = true;
+    fetch('/api/mode')
+      .then((r) => (r.ok ? (r.json() as Promise<{ hosted?: boolean }>) : null))
+      .then((m) => live && setHosted(m?.hosted === true))
+      .catch(() => undefined); // local node unreachable: no banner claim either way
+    return () => {
+      live = false;
+    };
+  }, [useFixtures]);
+
   useEffect(() => {
     const l = lang ?? 'en';
     document.documentElement.lang = l;
@@ -68,6 +82,7 @@ export function App() {
         Skip to main content
       </a>
       <SimulationBanner lang={lang ?? 'en'} />
+      {hosted ? <HostedBanner /> : null}
       <UnreviewedBanner lang={lang} />
       <header className="app-header">
         <span className="brand">Rural Health Radio</span>

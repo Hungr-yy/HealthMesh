@@ -10,3 +10,5 @@ docs/CAPABILITIES.md
 docs/spec
 docs/measurements
 docs/axe-results.json
+dist-server
+.vercel
