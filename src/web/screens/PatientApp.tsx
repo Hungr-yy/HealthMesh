@@ -864,6 +864,10 @@ function FieldValue({ f }: { f: DraftField }) {
   const { t } = useI18n();
   if (f.status === 'not_provided' || f.value === null)
     return <span className="not-provided">{t('notProvided')}</span>;
+  if (f.codes?.length)
+    return (
+      <span>{f.codes.map((c) => t(`v_${c.replace(/ /g, '_')}` as MessageKey)).join(', ')}</span>
+    );
   return <span>{f.value}</span>;
 }
 
@@ -931,7 +935,6 @@ function ConfirmScreen({
                 {f.status === 'uncertain' ? (
                   <div className="flag">
                     <Icon name="flag" /> {t('pleaseCheck')}
-                    {f.note ? <span className="small muted">{`: ${f.note}`}</span> : null}
                   </div>
                 ) : null}
               </dd>

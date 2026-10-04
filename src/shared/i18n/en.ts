@@ -148,6 +148,15 @@ export const en = {
   doneTitle: 'Finished',
   doneBody: 'This device was cleared. Nothing from this request is shown here now.',
   newRequest: 'Start again',
+  v_next_week: 'next week',
+  v_tomorrow: 'tomorrow',
+  v_today: 'today',
+  v_this_week: 'this week',
+  v_yes: 'Yes',
+  v_medicine: 'medicine',
+  v_fever: 'fever',
+  v_cough: 'cough',
+  v_pain: 'pain',
 } as const;
 
 export type MessageKey = keyof typeof en;

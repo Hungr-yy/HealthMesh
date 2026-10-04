@@ -143,4 +143,13 @@ export const ar: Record<MessageKey, string> = {
   doneTitle: 'تم',
   doneBody: 'تم مسح هذا الجهاز. لا يُعرض هنا شيء من هذا الطلب الآن.',
   newRequest: 'ابدأ من جديد',
+  v_next_week: 'الأسبوع القادم',
+  v_tomorrow: 'غداً',
+  v_today: 'اليوم',
+  v_this_week: 'هذا الأسبوع',
+  v_yes: 'نعم',
+  v_medicine: 'دواء',
+  v_fever: 'حمى',
+  v_cough: 'سعال',
+  v_pain: 'ألم',
 };

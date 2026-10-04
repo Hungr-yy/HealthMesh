@@ -152,4 +152,13 @@ export const sw: Record<MessageKey, string> = {
   doneTitle: 'Imekamilika',
   doneBody: 'Kifaa hiki kimefutwa. Hakuna kitu kutoka ombi hili kinachoonyeshwa sasa.',
   newRequest: 'Anza upya',
+  v_next_week: 'wiki ijayo',
+  v_tomorrow: 'kesho',
+  v_today: 'leo',
+  v_this_week: 'wiki hii',
+  v_yes: 'Ndiyo',
+  v_medicine: 'dawa',
+  v_fever: 'homa',
+  v_cough: 'kikohozi',
+  v_pain: 'maumivu',
 };

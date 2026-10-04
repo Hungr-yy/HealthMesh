@@ -123,6 +123,8 @@ export interface DraftField {
   key: 'request' | 'timing' | 'referral' | 'mentions' | 'contact' | 'for_whom' | 'attention';
   label: string;
   value: string | null;
+  /** Canonical codes for matched values so the patient UI can localize them (e.g. 'next week'). */
+  codes?: string[];
   status: DraftFieldStatus;
   /** Why the rule fired or why it is uncertain. */
   note?: string;

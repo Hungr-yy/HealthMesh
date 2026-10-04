@@ -50,7 +50,13 @@ export function buildDraftSummary(
   const timing = TIMING.map((t) => (t.re.test(hay) ? t.value : null)).filter(Boolean) as string[];
   const vague = ev(VAGUE_TIMING, hay);
   if (timing.length === 1 && !vague) {
-    fields.push({ key: 'timing', label: 'When', value: timing[0] ?? null, status: 'matched' });
+    fields.push({
+      key: 'timing',
+      label: 'When',
+      value: timing[0] ?? null,
+      codes: timing,
+      status: 'matched',
+    });
   } else if (timing.length > 1 || vague) {
     fields.push({
       key: 'timing',
@@ -72,6 +78,7 @@ export function buildDraftSummary(
           key: 'referral',
           label: 'Referral mentioned',
           value: 'Yes',
+          codes: ['yes'],
           status: 'matched',
           note: 'Referral destination/number not captured - check the original and records.',
         }
@@ -85,6 +92,7 @@ export function buildDraftSummary(
           key: 'mentions',
           label: 'Words the patient used',
           value: mentions.join(', '),
+          codes: mentions,
           status: 'matched',
           note: 'Keyword match on patient wording. Not a clinical finding.',
         }
