@@ -19,3 +19,8 @@ export function dataDir(): string {
   if (process.env.RHR_DATA_DIR) return path.resolve(process.env.RHR_DATA_DIR);
   return isHosted() ? path.join(os.tmpdir(), 'rhr-hosted-demo') : path.resolve('data');
 }
+
+/** Postgres URL for the shared hosted-demo journal (serverless hosts). Optional. */
+export function sharedDatabaseUrl(): string | null {
+  return process.env.RHR_DATABASE_URL ?? process.env.DATABASE_URL ?? null;
+}

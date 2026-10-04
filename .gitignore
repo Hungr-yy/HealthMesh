@@ -10,3 +10,4 @@ coverage
 .vitest
 dist-server
 .vercel
+.env*

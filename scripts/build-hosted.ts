@@ -48,7 +48,7 @@ async function vercel(): Promise<void> {
     path.join(fn, '.vc-config.json'),
     JSON.stringify(
       {
-        runtime: 'nodejs20.x',
+        runtime: 'nodejs22.x',
         handler: 'index.mjs',
         launcherType: 'Nodejs',
         // raw Node req/res: the service reads the request stream itself

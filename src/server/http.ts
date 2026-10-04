@@ -14,6 +14,9 @@ export interface Req {
 
 export type Handler = (req: Req) => unknown | Promise<unknown>;
 
+/** Wraps each API call (used by hosted mode to sync a shared journal around it). */
+export type Around = (call: () => Promise<unknown>, path: string) => Promise<unknown>;
+
 interface Route {
   method: string;
   parts: string[];
@@ -43,6 +46,8 @@ const MIME: Record<string, string> = {
 
 export class Router {
   private routes: Route[] = [];
+  /** Optional wrapper around every API handler call. */
+  around: Around | null = null;
 
   add(method: string, pattern: string, handler: Handler): void {
     this.routes.push({ method, parts: pattern.split('/').filter(Boolean), handler });
@@ -87,14 +92,16 @@ export class Router {
       const body = await readBody(rq);
       const m = this.match(method, url.pathname);
       if (!m) throw new ApiError('not_found', `No route ${method} ${url.pathname}`, 404);
-      const out = await m.route.handler({
-        method,
-        path: url.pathname,
-        query: url.searchParams,
-        headers: rq.headers,
-        body,
-        params: m.params,
-      });
+      const call = async () =>
+        m.route.handler({
+          method,
+          path: url.pathname,
+          query: url.searchParams,
+          headers: rq.headers,
+          body,
+          params: m.params,
+        });
+      const out = this.around ? await this.around(call, url.pathname) : await call();
       send(rs, 200, out ?? { ok: true });
     } catch (e) {
       if (e instanceof ApiError) {

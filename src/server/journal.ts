@@ -1,11 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+/** What the engine needs from a journal: the file journal below, or the shared (database) one. */
+export interface JournalLike {
+  readonly file: string;
+  readonly size: number;
+  recoveredTornWrite: boolean;
+  load(): unknown[];
+  append(record: unknown): void;
+  reset(): void;
+  close(): void;
+}
+
 /**
  * Append-only JSON-lines journal with fsync on every append (write-ahead).
  * A torn final line (crash mid-write) is detected on load and truncated.
  */
-export class Journal {
+export class Journal implements JournalLike {
   private fd: number;
   readonly file: string;
   size: number;

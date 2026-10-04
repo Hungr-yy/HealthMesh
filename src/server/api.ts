@@ -1,4 +1,4 @@
-import { HOSTED_BANNER, isHosted } from './hosted';
+import { HOSTED_BANNER, isHosted, sharedDatabaseUrl } from './hosted';
 import { principalFromBearer, staffRef, DEMO_TOKENS } from './auth';
 import type { Engine } from './engine';
 import { Router, type Req } from './http';
@@ -25,6 +25,8 @@ export function buildRouter(engine: Engine): Router {
   r.add('GET', '/api/mode', () => ({
     hosted: isHosted(),
     banner: isHosted() ? HOSTED_BANNER : null,
+    // how state is held: shared database log, a local journal file, or per-instance only
+    state: sharedDatabaseUrl() ? 'shared-database' : 'local-journal',
   }));
   r.add('GET', '/api/node/status', () => engine.nodeStatus());
   r.add('GET', '/api/node/health', () => engine.nodeHealth());

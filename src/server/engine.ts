@@ -42,7 +42,7 @@ import { hashSecret, secretMatches } from './auth';
 import { FIXTURE_STAFF } from '@shared/fixtures';
 import { gatewayStatus } from './gateway';
 import { can, type Permission } from './permissions';
-import { Journal } from './journal';
+import { Journal, type JournalLike } from './journal';
 import { newFlow, stepTick, UP, DOWN } from './sim';
 import {
   newState,
@@ -142,11 +142,18 @@ export class Engine {
   state: State = newState();
   private replaying = false;
 
-  private constructor(readonly journal: Journal | null) {}
+  private constructor(readonly journal: JournalLike | null) {}
 
   /** Open an engine. With a directory it is durable; with null it is in-memory (unit tests). */
   static open(dir: string | null): Engine {
     const e = new Engine(dir ? new Journal(dir) : null);
+    e.replay();
+    return e;
+  }
+
+  /** Open an engine over an already constructed journal (the shared hosted-demo journal). */
+  static openWith(journal: JournalLike): Engine {
+    const e = new Engine(journal);
     e.replay();
     return e;
   }
