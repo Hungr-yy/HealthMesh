@@ -1,0 +1,12 @@
+# Render Blueprint: a free Docker web service for the HOSTED DEMO (simulated, synthetic data).
+# Deploy: Render dashboard -> New -> Blueprint -> pick this repo. Nothing deploys until you do that.
+services:
+  - type: web
+    name: rural-health-radio-demo
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: RHR_HOSTED
+        value: '1'
