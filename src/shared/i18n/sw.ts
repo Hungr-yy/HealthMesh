@@ -131,6 +131,8 @@ export const sw: Record<MessageKey, string> = {
   ackUncertain:
     'Hatukuweza kuthibitisha kuwa ombi lako limekubaliwa. Kuangalia tena hakutatuma mara mbili.',
   checkAgain: 'Angalia tena',
+  nodePowerOff:
+    'Kifaa hiki cha kijijini hakina umeme au kinawashwa upya. Ombi lako lilihifadhiwa kwanza na litaendelea umeme ukirudi.',
   retrySend: 'Jaribu kutuma tena',
   noUpstream:
     'Hakuna kiungo kwa redio inayofuata sasa. Ujumbe wako unasubiri salama kwenye kifaa hiki.',

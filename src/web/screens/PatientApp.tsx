@@ -67,10 +67,14 @@ export function PatientApp({ client, device, onLanguage }: Props) {
     return 'lang';
   });
   const [submit, setSubmit] = useState<SubmitState>({ kind: 'idle' });
-  /** Set when the patient taps "Ask a follow-up": the next message joins that case. */
-  const [followUpOf, setFollowUpOf] = useState<string | null>(null);
+  /**
+   * Set by "Ask a follow-up" (joins the case) or "Send it again" / edit (joins the case AND
+   * supersedes a message, creating a linked new version).
+   */
+  const [link, setLink] = useState<{ caseId: string; supersedesMessageId?: string } | null>(null);
   const [caseView, setCaseView] = useState<CaseView | null>(null);
   const [nodeStatus, setNodeStatus] = useState<NodeStatus | null>(null);
+  const [nodeDown, setNodeDown] = useState(false);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const announce = useAnnounce();
 
@@ -115,8 +119,14 @@ export function PatientApp({ client, device, onLanguage }: Props) {
     try {
       const v = await client.getCase(activeCase.caseId, { secret: activeCase.secret });
       setCaseView(v);
-    } catch {
-      /* keep last known view: never blank the screen on a transient error */
+      client
+        .nodeStatus()
+        .then(setNodeStatus)
+        .catch(() => undefined);
+      setNodeDown(false);
+    } catch (e) {
+      // Keep the last known view: never blank the screen on a transient error.
+      if (e instanceof ApiError && e.code === 'node_unavailable') setNodeDown(true);
     }
   }, [client, activeCase]);
 
@@ -160,7 +170,7 @@ export function PatientApp({ client, device, onLanguage }: Props) {
     setForm(EMPTY_FORM);
     setCaseView(null);
     setSubmit({ kind: 'idle' });
-    setFollowUpOf(null);
+    setLink(null);
     lastAnnounced.current = null;
     setScreen('done');
   }, [device]);
@@ -171,7 +181,7 @@ export function PatientApp({ client, device, onLanguage }: Props) {
     setForm(EMPTY_FORM);
     setCaseView(null);
     setSubmit({ kind: 'idle' });
-    setFollowUpOf(null);
+    setLink(null);
     lastAnnounced.current = null;
     setScreen('lang');
   }, [device, session]);
@@ -184,7 +194,8 @@ export function PatientApp({ client, device, onLanguage }: Props) {
       details: form.details.trim(),
       contact: form.contact.trim(),
       language: lang,
-      ...(followUpOf ? { relatedCaseId: followUpOf } : {}),
+      ...(link && !link.supersedesMessageId ? { relatedCaseId: link.caseId } : {}),
+      ...(link?.supersedesMessageId ? { supersedesMessageId: link.supersedesMessageId } : {}),
       entryMode: session.mode === 'worker' ? 'assisted' : 'typed',
       ...(session.mode === 'worker' ? { assistedBy: session.workerLabel || 'health worker' } : {}),
       consent: {
@@ -193,14 +204,12 @@ export function PatientApp({ client, device, onLanguage }: Props) {
         replyMethod: form.replyMethod,
       },
     }),
-    [form, lang, session.mode, session.workerLabel, followUpOf],
+    [form, lang, session.mode, session.workerLabel, link],
   );
 
   const send = useCallback(async () => {
     // The message id and secret are created ONCE per submission attempt so retries reuse them.
-    const followCase = followUpOf
-      ? session.openCases.find((c) => c.caseId === followUpOf)
-      : undefined;
+    const followCase = link ? session.openCases.find((c) => c.caseId === link.caseId) : undefined;
     const pending = session.pending ?? {
       messageId: newUuid(),
       secret: followCase?.secret ?? newSecret(),
@@ -217,7 +226,7 @@ export function PatientApp({ client, device, onLanguage }: Props) {
         messageId: res.messageId,
         secret: pending.secret,
       };
-      setFollowUpOf(null);
+      setLink(null);
       device.clearDraft();
       setForm(EMPTY_FORM);
       updateSession({
@@ -236,7 +245,7 @@ export function PatientApp({ client, device, onLanguage }: Props) {
       }
       setSubmit({ kind: 'uncertain' });
     }
-  }, [client, session, updateSession, buildInput, device, followUpOf]);
+  }, [client, session, updateSession, buildInput, device, link]);
 
   /** Lost response: ask the node by the stable message id. Never creates a second case. */
   const checkAgain = useCallback(async () => {
@@ -375,6 +384,8 @@ export function PatientApp({ client, device, onLanguage }: Props) {
             view={caseView}
             oc={activeCase}
             client={client}
+            noUpstream={nodeStatus?.upstream === 'link_down'}
+            nodeDown={nodeDown}
             onRefresh={() => void refresh()}
             onReply={() => setScreen('reply')}
             onFinish={lockDevice}
@@ -382,6 +393,8 @@ export function PatientApp({ client, device, onLanguage }: Props) {
               if (!caseView || !activeCase) return;
               const last = caseView.versions[caseView.versions.length - 1];
               if (!last) return;
+              setLink({ caseId: activeCase.caseId, supersedesMessageId: last.messageId });
+              setSubmit({ kind: 'idle' });
               setForm({
                 ...EMPTY_FORM,
                 requestType: last.input.requestType,
@@ -406,7 +419,7 @@ export function PatientApp({ client, device, onLanguage }: Props) {
             onRefresh={() => void refresh()}
             onBack={() => setScreen('receipt')}
             onFollowUp={() => {
-              setFollowUpOf(activeCase?.caseId ?? null);
+              setLink(activeCase ? { caseId: activeCase.caseId } : null);
               setForm({ ...EMPTY_FORM, requestType: 'message_clinic' });
               setScreen('details');
             }}
@@ -1167,6 +1180,8 @@ function ReceiptScreen({
   view,
   oc,
   client,
+  noUpstream,
+  nodeDown,
   onRefresh,
   onReply,
   onFinish,
@@ -1176,6 +1191,8 @@ function ReceiptScreen({
   view: CaseView | null;
   oc: OpenCase | null;
   client: HealthMessagingClient;
+  noUpstream: boolean;
+  nodeDown: boolean;
   onRefresh: () => void;
   onReply: () => void;
   onFinish: () => void;
@@ -1197,6 +1214,12 @@ function ReceiptScreen({
           <p className="small muted">{t('receiptRefNote')}</p>
         </div>
       ) : null}
+      {nodeDown ? (
+        <div className="notice" data-testid="node-power-off">
+          <Icon name="warning" />
+          <span>{t('nodePowerOff')}</span>
+        </div>
+      ) : null}
       {v ? (
         <>
           {v.tracks.exception === 'expired' ? (
@@ -1215,6 +1238,14 @@ function ReceiptScreen({
             <div className="notice" data-testid="exc-withdrawn">
               <Icon name="info" />
               <span>{t('withdrawn')}</span>
+            </div>
+          ) : null}
+          {noUpstream &&
+          (!v.tracks.transport || v.tracks.transport === 'queued') &&
+          !v.tracks.exception ? (
+            <div className="notice" data-testid="no-upstream">
+              <Icon name="radio" />
+              <span>{t('noUpstream')}</span>
             </div>
           ) : null}
           <TrackList v={v} />

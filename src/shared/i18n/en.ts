@@ -128,6 +128,8 @@ export const en = {
   ackUncertain:
     'We could not confirm that your request was accepted. Checking again will not send it twice.',
   checkAgain: 'Check again',
+  nodePowerOff:
+    'This village device has no power or is restarting. Your request was saved first and will continue when power returns.',
   retrySend: 'Try sending again',
   noUpstream: 'No link to the next radio right now. Your message waits safely on this device.',
   editAfterSend: 'Edit and send a new version',

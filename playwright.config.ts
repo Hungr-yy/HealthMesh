@@ -6,6 +6,7 @@ const viteOnly = process.env.RHR_E2E_VITE === '1';
 
 export default defineConfig({
   testDir: 'e2e',
+  globalSetup: './e2e/global-setup.ts',
   timeout: 90_000,
   fullyParallel: false,
   workers: 1,

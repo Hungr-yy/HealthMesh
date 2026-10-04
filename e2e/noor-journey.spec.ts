@@ -1,15 +1,10 @@
-import fs from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { AXE_FILE, VIEWPORTS, axe, expectNoHorizontalScroll, simPost, snap } from './helpers';
+import { VIEWPORTS, axe, expectNoHorizontalScroll, simPost, snap } from './helpers';
 
 /**
  * The P0 "Noor" vertical flow against the REAL local service + relay simulator, in a real
  * (headless Chromium) browser, at 320px and desktop. Also captures screenshots and axe results.
  */
-test.beforeAll(() => {
-  if (fs.existsSync(AXE_FILE)) fs.rmSync(AXE_FILE);
-});
-
 for (const vp of VIEWPORTS) {
   test(`Noor journey end to end @ ${vp.name}`, async ({ browser, request }) => {
     test.setTimeout(180_000);

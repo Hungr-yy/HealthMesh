@@ -73,7 +73,7 @@ describe('HTTP API authorization (real service process)', () => {
       },
     );
     await adv(11);
-    await post('/api/sim/config', { storageLimitBytes: 100 });
+    await post('/api/sim/config', { storageLimitBytes: 20 });
     await expect(c.submitRequest(m.input, m.messageId, { secret: m.secret })).rejects.toMatchObject(
       {
         code: 'storage_nearly_full',
