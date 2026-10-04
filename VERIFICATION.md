@@ -1,0 +1,87 @@
+# Verification
+
+> **SIMULATION. SYNTHETIC DATA ONLY.** Everything below was measured on a development machine against the simulator and a local service. None of it says anything about real radio links, real users, real clinics, or clinical safety.
+
+Labels: **FACT** = measured/tested here, conditions stated, reproducible. **INFERENCE** = reasoning from facts plus stated assumptions. **UNKNOWN** = not known.
+
+Environment: Linux, Node v20.19.2, headless Chromium via Playwright, TypeScript 6, Vite 8, Vitest. Tested date: 2026-10-04.
+
+## 1. Static checks (FACT)
+
+| Command                                                             | Result               |
+| ------------------------------------------------------------------- | -------------------- |
+| `npm run typecheck` (`tsc --noEmit`)                                | 0 errors             |
+| `npm run lint` (ESLint flat config, typescript-eslint, react-hooks) | 0 errors, 0 warnings |
+| `npm run format:check` (Prettier)                                   | all files formatted  |
+
+## 2. Unit and service tests (FACT): `npm test`
+
+**5 files, 46 tests, 46 passed, 0 failed** (Vitest, about 1.6 s).
+
+| File                              | Tests | Covers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------------- | ----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/shared.test.ts`            |    13 | codec round-trip (en/sw/ar), language-pack key parity, tracks never regress or claim clinic receipt early, event de-duplication and ordering, mock translation and draft rules                                                                                                                                                                                                                                                                                                                                                                      |
+| `tests/session.test.ts`           |     3 | switching patient wipes drafts/secrets/cases, 24 h draft retention, lock wipes all                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `tests/phase2-durability.test.ts` |     8 | restart replay, torn final record dropped, real-process **SIGKILL** after an acknowledged accept, idempotent message id, id conflict, storage nearly full, 401 without credential                                                                                                                                                                                                                                                                                                                                                                   |
+| `tests/relay.test.ts`             |    18 | full journey; restart before transmission; power interruption; lost ack (hop) and lost submission response; duplicate delivery at the clinic hop; reordered acks; outage then restore; bounded retry; expiry and linked resubmission; patient isolation; **reply unsent until clinician approval** (coordinator, CHW, operator, anonymous, not-in-review all rejected); translation failure keeps the original; operator view has no patient content; staff priority with provenance; withdrawal; edit makes a linked version; deterministic replay |
+| `tests/api.test.ts`               |     4 | HTTP role checks on a real service process, typed storage-full / node-unavailable errors, malformed and oversize input rejected                                                                                                                                                                                                                                                                                                                                                                                                                     |
+
+## 3. Browser tests (FACT): `npm run test:e2e`
+
+Real service + built UI, headless Chromium, two viewports (320x640 and 1280x800), each full run starting from a fresh data directory.
+
+**40 tests, 40 passed, 0 failed** (about 1.7 min). A repeat run matched (section 7).
+
+| Spec                       | Tests | Covers                                                                                                                                                                                                 |
+| -------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `noor-journey.spec.ts`     |     2 | Noor journey A-H, clinic inbox, case, reply editor and approval, operator dashboard, reply arrival and open, device cleared                                                                            |
+| `languages-assist.spec.ts` |    12 | Swahili and Arabic (UNREVIEWED banner, RTL), translation flagged / unavailable, uncertain highlights, assisted mode without leakage between patients, recorded assisted reading                        |
+| `failures.spec.ts`         |    20 | node unavailable, storage nearly full, lost response (same message id), no upstream signal, power-off on receipt, expiry and resubmission, bounded retry, delayed response shows ages only, withdrawal |
+| `accessibility.spec.ts`    |     4 | 200% text at 320px without overflow or clipping, focus placement, visible focus ring, no animation, live-region announcement, RTL attributes                                                           |
+| `phase1-fixtures.spec.ts`  |     2 | keyboard-operable flow on static fixtures, 48x48 px primary targets                                                                                                                                    |
+
+## 4. Accessibility (FACT, with limits)
+
+- **axe-core 4.13.0 via @axe-core/playwright, scanned on every recorded screen: 84 scans (42 screens x 2 viewports), 0 violations** (988 rule passes at 320px, 998 at 1280px). Raw data: `docs/axe-results.json`.
+- Contrast ratios computed from the stylesheet: all text pairs pass 4.5:1 (lowest: muted text on page background 7.87:1); control border 4.07:1 and focus ring 8.48:1 to 9.89:1 against their backgrounds (non-text 3:1). See `docs/measurements/contrast.md`. The focus ring is drawn outside the control, so it is measured against the surrounding background.
+- Layout: no horizontal scroll at 320px on any recorded screen; 200% text checked on the journey in `accessibility.spec.ts`.
+- **Not covered:** axe finds only a subset of WCAG issues. **UNKNOWN:** behaviour with real screen readers (TalkBack, VoiceOver, NVDA), switch access, low-end devices, outdoor glare.
+
+## 5. Encoded request size (FACT for the bytes, INFERENCE for frames and airtime)
+
+`npm run evidence:bytes` -> `docs/measurements/request-bytes.md`.
+
+Conditions: prototype codec (`src/shared/codec.ts`), 16-byte message id, UTF-8, synthetic fixtures; **no encryption, FEC, or radio framing**; JSON = the POST body the browser sends to the local node; deflate = raw level 9 of the codec bytes. The 300/1000-character cases repeat one sentence, so their deflate sizes are unrealistically small and must not be generalized.
+
+| Case                          | JSON | codec | codec + deflate |
+| ----------------------------- | ---: | ----: | --------------: |
+| Noor, English                 |  389 |   135 |             118 |
+| Noor, Swahili (UNREVIEWED)    |  362 |   108 |              95 |
+| Noor, Arabic (UNREVIEWED)     |  390 |   136 |             113 |
+| Minimal (type + 12-char note) |  291 |    33 |              30 |
+| Assisted entry with contact   |  438 |   169 |             139 |
+| 300-character note            |  623 |   370 |             100 |
+| 1000-character note           | 1323 |  1070 |             107 |
+
+INFERENCE: with assumed 128-byte frames and 8-byte overhead, a Noor English request fits in 2 frames, about 1.0 s at an assumed 1200 bps. These are arithmetic on assumptions, not RF results. Base64 transport would add about 33% (from the source plan; not measured here).
+
+## 6. What is NOT validated (UNKNOWN)
+
+- **Real users.** No usability testing with patients, community health workers, or clinicians. Time-to-complete, error rates, comprehension, and trust are unmeasured. Any success target in the plan is a target only.
+- **Real RF and hardware.** No radio, range, power, duty-cycle, latency, or throughput measurement. Simulator loss and delays are scripted, not modelled on real links. Country radio authorization is unresolved.
+- **Translation and language quality.** Swahili and Arabic strings are UNREVIEWED demo text; the translator is a tiny phrase dictionary.
+- **Clinical safety.** Templates, draft rules, and escalation wording have had no clinical review. The prototype does not diagnose, prescribe, or prioritize on its own; humans approve every reply.
+- **Security and privacy.** No security review or penetration test. No at-rest encryption; demo tokens are not authentication; no consent/retention legal review.
+- **Scale and long-run behaviour.** No load, soak, multi-device, or clock-skew testing. Node clocks are modelled as unsynced.
+- **Voice input** is not implemented.
+- **Integrations** (DHIS2, FHIR, LLM assistance) are plan only.
+
+## 7. Reproduce
+
+```bash
+npm ci && npx playwright install chromium
+npm run check && npm run test:e2e
+npm run evidence:bytes && npm run evidence:contrast
+```
+
+Repeat-run note: the full Playwright suite was run twice back to back on this machine; both runs were 40 of 40 passed, and the second run produced the committed screenshots and axe file.

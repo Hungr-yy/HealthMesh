@@ -1,0 +1,506 @@
+[
+  {
+    "viewport": "mobile-320",
+    "screen": "40-fail-node-unavailable-draft-not-accepted",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "41-fail-storage-nearly-full",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "42-fail-lost-ack-uncertain",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "43-fail-no-upstream-signal",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "44-fail-power-off-receipt",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "45-fail-expired",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "46-fail-intervention-required",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "47-delayed-clinic-response-ages-only",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "48-withdraw-explained",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "40-fail-node-unavailable-draft-not-accepted",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "41-fail-storage-nearly-full",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "42-fail-lost-ack-uncertain",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "43-fail-no-upstream-signal",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "44-fail-power-off-receipt",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "45-fail-expired",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "46-fail-intervention-required",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "47-delayed-clinic-response-ages-only",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "48-withdraw-explained",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "20-sw-B-home",
+    "violations": [],
+    "passes": 21
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "21-sw-E-confirm-translation-needs-review",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "22-sw-G-receipt",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "23-sw-clinic-case-original-and-mock-translation",
+    "violations": [],
+    "passes": 29
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "24-sw-H-reply-in-swahili-needs-review",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "25-ar-A-language-rtl",
+    "violations": [],
+    "passes": 20
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "26-ar-E-confirm-rtl",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "27-ar-G-receipt-rtl",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "28-E-uncertain-highlighted",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "29-sw-E-translation-unavailable",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "30-clinic-translation-unavailable",
+    "violations": [],
+    "passes": 29
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "31-sw-H-reply-untranslated-fallback",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "32-assisted-G-receipt-patient-A",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "33-assisted-check-reference-rejected",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "34-assisted-H-record-assisted-reading",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "20-sw-B-home",
+    "violations": [],
+    "passes": 21
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "21-sw-E-confirm-translation-needs-review",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "22-sw-G-receipt",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "23-sw-clinic-case-original-and-mock-translation",
+    "violations": [],
+    "passes": 29
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "24-sw-H-reply-in-swahili-needs-review",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "25-ar-A-language-rtl",
+    "violations": [],
+    "passes": 20
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "26-ar-E-confirm-rtl",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "27-ar-G-receipt-rtl",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "28-E-uncertain-highlighted",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "29-sw-E-translation-unavailable",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "30-clinic-translation-unavailable",
+    "violations": [],
+    "passes": 29
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "31-sw-H-reply-untranslated-fallback",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "32-assisted-G-receipt-patient-A",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "33-assisted-check-reference-rejected",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "34-assisted-H-record-assisted-reading",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "01-A-language-access",
+    "violations": [],
+    "passes": 20
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "02-B-home",
+    "violations": [],
+    "passes": 21
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "03-C-choose-request",
+    "violations": [],
+    "passes": 21
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "04-D-details",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "05-E-confirm-understanding",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "06-F-review-consent",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "07-G-receipt-waiting-to-send",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "08-G-receipt-relaying",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "10-clinic-inbox",
+    "violations": [],
+    "passes": 22
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "11-clinic-case",
+    "violations": [],
+    "passes": 29
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "09-G-receipt-clinic-received",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "12-clinic-reply-editor",
+    "violations": [],
+    "passes": 24
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "13-clinic-reply-approved",
+    "violations": [],
+    "passes": 24
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "14-operator-dashboard",
+    "violations": [],
+    "passes": 27
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "15-G-receipt-reply-arrived",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "16-H-reply-arrived-not-opened",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "17-H-reply-opened",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "18-done-device-cleared",
+    "violations": [],
+    "passes": 20
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "01-A-language-access",
+    "violations": [],
+    "passes": 20
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "02-B-home",
+    "violations": [],
+    "passes": 21
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "03-C-choose-request",
+    "violations": [],
+    "passes": 21
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "04-D-details",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "05-E-confirm-understanding",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "06-F-review-consent",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "07-G-receipt-waiting-to-send",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "08-G-receipt-relaying",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "10-clinic-inbox",
+    "violations": [],
+    "passes": 22
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "11-clinic-case",
+    "violations": [],
+    "passes": 29
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "09-G-receipt-clinic-received",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "12-clinic-reply-editor",
+    "violations": [],
+    "passes": 29
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "13-clinic-reply-approved",
+    "violations": [],
+    "passes": 29
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "14-operator-dashboard",
+    "violations": [],
+    "passes": 27
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "15-G-receipt-reply-arrived",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "16-H-reply-arrived-not-opened",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "17-H-reply-opened",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "18-done-device-cleared",
+    "violations": [],
+    "passes": 20
+  }
+]
