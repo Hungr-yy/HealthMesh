@@ -111,7 +111,7 @@
     "viewport": "mobile-320",
     "screen": "20-sw-B-home",
     "violations": [],
-    "passes": 21
+    "passes": 22
   },
   {
     "viewport": "mobile-320",
@@ -129,7 +129,7 @@
     "viewport": "mobile-320",
     "screen": "23-sw-clinic-case-original-and-mock-translation",
     "violations": [],
-    "passes": 29
+    "passes": 30
   },
   {
     "viewport": "mobile-320",
@@ -171,7 +171,7 @@
     "viewport": "mobile-320",
     "screen": "30-clinic-translation-unavailable",
     "violations": [],
-    "passes": 29
+    "passes": 30
   },
   {
     "viewport": "mobile-320",
@@ -201,7 +201,7 @@
     "viewport": "desktop-1280",
     "screen": "20-sw-B-home",
     "violations": [],
-    "passes": 21
+    "passes": 22
   },
   {
     "viewport": "desktop-1280",
@@ -219,7 +219,7 @@
     "viewport": "desktop-1280",
     "screen": "23-sw-clinic-case-original-and-mock-translation",
     "violations": [],
-    "passes": 29
+    "passes": 30
   },
   {
     "viewport": "desktop-1280",
@@ -261,7 +261,7 @@
     "viewport": "desktop-1280",
     "screen": "30-clinic-translation-unavailable",
     "violations": [],
-    "passes": 29
+    "passes": 30
   },
   {
     "viewport": "desktop-1280",
@@ -297,7 +297,7 @@
     "viewport": "mobile-320",
     "screen": "02-B-home",
     "violations": [],
-    "passes": 21
+    "passes": 22
   },
   {
     "viewport": "mobile-320",
@@ -339,13 +339,13 @@
     "viewport": "mobile-320",
     "screen": "10-clinic-inbox",
     "violations": [],
-    "passes": 22
+    "passes": 23
   },
   {
     "viewport": "mobile-320",
     "screen": "11-clinic-case",
     "violations": [],
-    "passes": 29
+    "passes": 30
   },
   {
     "viewport": "mobile-320",
@@ -357,13 +357,13 @@
     "viewport": "mobile-320",
     "screen": "12-clinic-reply-editor",
     "violations": [],
-    "passes": 24
+    "passes": 25
   },
   {
     "viewport": "mobile-320",
     "screen": "13-clinic-reply-approved",
     "violations": [],
-    "passes": 24
+    "passes": 25
   },
   {
     "viewport": "mobile-320",
@@ -405,7 +405,7 @@
     "viewport": "desktop-1280",
     "screen": "02-B-home",
     "violations": [],
-    "passes": 21
+    "passes": 22
   },
   {
     "viewport": "desktop-1280",
@@ -447,13 +447,13 @@
     "viewport": "desktop-1280",
     "screen": "10-clinic-inbox",
     "violations": [],
-    "passes": 22
+    "passes": 23
   },
   {
     "viewport": "desktop-1280",
     "screen": "11-clinic-case",
     "violations": [],
-    "passes": 29
+    "passes": 30
   },
   {
     "viewport": "desktop-1280",
@@ -465,13 +465,13 @@
     "viewport": "desktop-1280",
     "screen": "12-clinic-reply-editor",
     "violations": [],
-    "passes": 29
+    "passes": 30
   },
   {
     "viewport": "desktop-1280",
     "screen": "13-clinic-reply-approved",
     "violations": [],
-    "passes": 29
+    "passes": 30
   },
   {
     "viewport": "desktop-1280",
@@ -502,5 +502,353 @@
     "screen": "18-done-device-cleared",
     "violations": [],
     "passes": 20
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "70-spec-1-accepted-while-upstream-down",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "71-spec-2-after-service-restart-still-queued",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "72-spec-3-gateway-ack-clinic-not-yet",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "73-spec-4-operator-gateway-holds-request",
+    "violations": [],
+    "passes": 27
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "74-spec-5-duplicate-injected-one-case",
+    "violations": [],
+    "passes": 27
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "75-spec-6-clinic-original-and-draft",
+    "violations": [],
+    "passes": 30
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "76-spec-7-reply-approved-by-clinician",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "77-spec-8-return-path-interrupted",
+    "violations": [],
+    "passes": 27
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "78-spec-9-reply-retrieved-at-village",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "79-spec-10-operator-view-no-patient-content",
+    "violations": [],
+    "passes": 27
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "80-spec-11-device-locked",
+    "violations": [],
+    "passes": 20
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "70-spec-1-accepted-while-upstream-down",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "71-spec-2-after-service-restart-still-queued",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "72-spec-3-gateway-ack-clinic-not-yet",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "73-spec-4-operator-gateway-holds-request",
+    "violations": [],
+    "passes": 27
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "74-spec-5-duplicate-injected-one-case",
+    "violations": [],
+    "passes": 27
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "75-spec-6-clinic-original-and-draft",
+    "violations": [],
+    "passes": 30
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "76-spec-7-reply-approved-by-clinician",
+    "violations": [],
+    "passes": 30
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "77-spec-8-return-path-interrupted",
+    "violations": [],
+    "passes": 27
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "78-spec-9-reply-retrieved-at-village",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "79-spec-10-operator-view-no-patient-content",
+    "violations": [],
+    "passes": 27
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "80-spec-11-device-locked",
+    "violations": [],
+    "passes": 20
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "90-clinic-clarification-question-approved",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "91-patient-clinic-question",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "92-clinic-conversation-linked-answer",
+    "violations": [],
+    "passes": 30
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "93-clinic-coverage-overdue-stale-statement",
+    "violations": [],
+    "passes": 29
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "94-clinic-handover-and-closed-with-outcome",
+    "violations": [],
+    "passes": 30
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "95-admin-config-audit-permissions",
+    "violations": [],
+    "passes": 28
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "96-capability-matrix",
+    "violations": [],
+    "passes": 18
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "90-clinic-clarification-question-approved",
+    "violations": [],
+    "passes": 30
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "91-patient-clinic-question",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "92-clinic-conversation-linked-answer",
+    "violations": [],
+    "passes": 30
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "93-clinic-coverage-overdue-stale-statement",
+    "violations": [],
+    "passes": 29
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "94-clinic-handover-and-closed-with-outcome",
+    "violations": [],
+    "passes": 30
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "95-admin-config-audit-permissions",
+    "violations": [],
+    "passes": 28
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "96-capability-matrix",
+    "violations": [],
+    "passes": 18
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "50-voice-D-ready",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "51-voice-D-consent",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "52-voice-D-listening",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "53-voice-D-transcript-added-and-edited",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "54-voice-E-confirm-flags-voice-text",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "55-voice-D-unsupported-fallback",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "56-voice-D-permission-denied",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "57-voice-D-error-mid-capture",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "58-ar-voice-D-consent-rtl",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "59-ar-voice-D-transcript-rtl",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "mobile-320",
+    "screen": "60-ar-voice-E-confirm-flag-rtl",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "50-voice-D-ready",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "51-voice-D-consent",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "52-voice-D-listening",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "53-voice-D-transcript-added-and-edited",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "54-voice-E-confirm-flags-voice-text",
+    "violations": [],
+    "passes": 23
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "55-voice-D-unsupported-fallback",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "56-voice-D-permission-denied",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "57-voice-D-error-mid-capture",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "58-ar-voice-D-consent-rtl",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "59-ar-voice-D-transcript-rtl",
+    "violations": [],
+    "passes": 25
+  },
+  {
+    "viewport": "desktop-1280",
+    "screen": "60-ar-voice-E-confirm-flag-rtl",
+    "violations": [],
+    "passes": 23
   }
 ]
