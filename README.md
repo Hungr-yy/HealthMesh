@@ -3,9 +3,15 @@
 > **SIMULATION. NOT A MEDICAL DEVICE. SYNTHETIC DATA ONLY.**
 > Nothing in this repository transmits over a real radio, reaches a real clinic, or contains a real patient. Every screen shows a simulation banner. Do not use it for care, triage, or emergencies.
 
-A prototype of **delay-tolerant rural health messaging**: a person with no reliable connectivity writes a short request on a phone, a local node stores it durably, a chain of relay nodes carries it hop by hop to a gateway and a clinic, and a clinician-approved reply travels back. The point is to make _honest waiting_ usable: the patient always sees what is known, what is not, and what to do next.
+**Rural Health Radio is a messaging system that stays honest when the network does not.** A person far from a clinic writes a short request on a phone. A village node saves it to disk _before_ it says "accepted", relays it hop by hop through a gateway to a clinic, and a **clinician-approved** reply travels back. At every moment the patient sees only what is actually known: _waiting to send_, _the gateway has it_, _the clinic received it_, _a reply arrived_, _it was opened_ - each from evidence, never from hope.
 
-This repo implements the **P0 "Noor" vertical flow** end to end, against a deterministic relay simulator and a real local service with a durable write-ahead journal.
+![The village screen after the relay is restored: the gateway has acknowledged, the clinic has not (SIMULATED)](docs/screenshots/desktop-1280/72-spec-3-gateway-ack-clinic-not-yet.png)
+
+**Try the full scripted demo** (outage, restart, restore, separate gateway and clinic acknowledgements, clinician approval, return-path interruption, duplicate delivery producing one case, operator view without patient content, lock): `npm run dev`, then follow [docs/DEMO.md](docs/DEMO.md); it runs unattended as `e2e/spec-demo.spec.ts`. Silent captioned videos are in [`submission/`](submission/SUBMISSION.md).
+
+**Scope, honestly:** everything runs in a simulator on one laptop with synthetic data. See the [capability matrix](docs/CAPABILITIES.md) (also at `#/capabilities`) for what is simulated, implemented, evaluated (by automated tests only) and still missing.
+
+This repo implements the **P0 "Noor" vertical flow** plus the Stage A product-spec items listed below, against a deterministic relay simulator and a real local service with a durable write-ahead journal.
 
 ## Quick start
 
@@ -28,9 +34,11 @@ npm start          # http://127.0.0.1:8787
 
 Useful views: patient app `#/`, clinic `#/clinic`, operator `#/operator`, relay simulator `#/sim` (advance virtual time, cut links/power, restart the node, inject lost acks). `?fixtures=1` runs the patient UI on static fixtures with no service.
 
-Demo sign-in (**not real authentication**): the clinic and operator views offer demo staff accounts (clinician, coordinator, community health worker, operator); tokens are listed in `src/shared/fixtures.ts`. Only the clinician role can approve a reply.
+Demo sign-in (**not real authentication**): the staff views offer synthetic accounts. Only the clinician role can approve a reply; this is enforced in the service, not just hidden in the UI.
 
-Environment: `RHR_PORT` (default 8787), `RHR_DATA_DIR` (default `data/`).
+Staff demo sign-ins (tokens in `src/shared/fixtures.ts`): clinician Dr. Amina, clinician Dr. Baraka (for handover), coordinator Juma, community health worker Grace, network operator, deployment administrator Zawadi. Extra views: `#/admin` (settings, permission table, audit trail) and `#/capabilities` (capability and language matrices).
+
+Environment: `RHR_PORT` (default 8787), `RHR_DATA_DIR` (default `data/`), `RHR_SIM_CONTROLS=off` (removes every `/api/sim/*` simulator endpoint; the harness is not part of a real deployment).
 
 ## What the prototype demonstrates
 
@@ -40,7 +48,13 @@ Environment: `RHR_PORT` (default 8787), `RHR_DATA_DIR` (default `data/`).
 4. **Relay custody:** hop-by-hop acks, bounded retry with backoff, duplicate delivery, reordered acks, lost data and lost acks, link outages, node power-off, TTL expiry, and idempotent resubmission with the same message id.
 5. **Clinic desk:** inbox, claim, start review, **clinician-only approval** of a reply (assistive draft with provenance; coordinators/CHWs/operators and unauthenticated callers are rejected), staff priority with provenance.
 6. **Operator view:** health of the network with **no patient content**.
-7. **Privacy basics:** a village device needs its case secret (`Authorization: Case <secret>`); a case reference alone returns 401. Switching patient wipes the device draft; drafts have a 24 h retention policy.
+7. **Gateway as an explicit module:** separate inbox and outbox with independent radio-side and upstream-side outage handling. The gateway acknowledges to the village on its own; the clinic acknowledgement is a separate, later fact. (Journal-derived state in this prototype, not a separate process or disk.)
+8. **Roles enforced in the service:** patient (case secret), community health worker, clinic reviewer, clinic coordinator, network operator (never any clinical content), deployment administrator. Unauthorized-access tests at service and HTTP level.
+9. **Clarification and correction:** the clinic can ask an approved question; the patient's answer is a linked follow-up in the same case. Corrections create linked versions; withdrawal is explained honestly (forwarded copies cannot be erased).
+10. **Clinic coverage:** a staffing _statement_ (never inferred; stale after 4 h is labelled), overdue vs the review window, audited handover, and closure with an explicit outcome (administrative; asserts no health outcome).
+11. **Consent records and audit events** (identifiers only, no names or message text); admin settings changes are attributed. **Village node health** indicators (availability, storage, queue age, radio adapter status, last sync).
+12. **Voice input** behind a swappable adapter (see the table below).
+13. **Privacy basics:** a village device needs its case secret (`Authorization: Case <secret>`); a case reference alone returns 401. Switching patient wipes the device draft; drafts have a 24 h retention policy.
 
 ## Architecture
 
@@ -72,20 +86,20 @@ Code map: `src/shared` (contract and pure logic), `src/server` (engine, journal,
 
 ## What is simulated and what is not
 
-| Area                      | Status in this repo                                                                                            |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Radio / RF links          | **Simulated.** Virtual time (1 tick = 1 simulated minute), scripted loss. No RF, no spectrum, no range claims. |
-| Relay, gateway, clinic    | **Simulated** nodes inside one process, driven by the simulator.                                               |
-| Local node service        | **Real code, real disk journal**, but runs on a laptop, not on target hardware.                                |
-| Compact wire codec        | **Prototype** binary codec; no encryption, FEC, or framing. Sizes are measured, airtime is inference.          |
-| Draft summary             | **Deterministic rules.** No AI model. Output is a draft for a human.                                           |
-| Translation               | **Mock phrase dictionary.** Always flags non-English as needing review.                                        |
-| Swahili and Arabic        | **UNREVIEWED demo strings.** Not checked by a qualified medical translator; stated in the UI.                  |
-| Voice input               | **Not implemented.** The UI says speaking is unavailable and offers typing or a health worker.                 |
-| At-rest encryption        | **None.** Journal and drafts are plaintext (synthetic data only).                                              |
-| Authentication            | **Demo tokens only.** Header navigation between views is a demo convenience.                                   |
-| DHIS2 / FHIR / LLM assist | **Plan only.** Not built.                                                                                      |
-| Clock quality             | Village and relay nodes are marked "unsynced"; the UI never claims synchronized time.                          |
+| Area                         | Status in this repo                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Radio / RF links             | **Simulated.** Virtual time (1 tick = 1 simulated minute), scripted loss. No RF, no spectrum, no range claims.                                                                                                                                                                                                                                                          |
+| Relay, gateway, clinic       | **Simulated** nodes inside one process, driven by the simulator.                                                                                                                                                                                                                                                                                                        |
+| Local node service           | **Real code, real disk journal**, but runs on a laptop, not on target hardware.                                                                                                                                                                                                                                                                                         |
+| Compact wire codec           | **Prototype** binary codec; no encryption, FEC, or framing. Sizes are measured, airtime is inference.                                                                                                                                                                                                                                                                   |
+| Draft summary                | **Deterministic rules.** No AI model. Output is a draft for a human.                                                                                                                                                                                                                                                                                                    |
+| Translation                  | **Mock phrase dictionary.** Always flags non-English as needing review.                                                                                                                                                                                                                                                                                                 |
+| Swahili and Arabic           | **UNREVIEWED demo strings.** Not checked by a qualified medical translator; stated in the UI.                                                                                                                                                                                                                                                                           |
+| Voice input (speech-to-text) | **Implemented behind an adapter** (browser Web Speech API). **Browser speech recognition may send audio to a third-party service**, so a consent line is shown before first use; this app records and stores no audio. Recognition quality for en/sw/ar is **UNKNOWN** (tests use a scripted fake). Typing always works; unsupported/denied/error show a plain message. |
+| At-rest encryption           | **None.** Journal and drafts are plaintext (synthetic data only).                                                                                                                                                                                                                                                                                                       |
+| Authentication               | **Demo tokens only.** Header navigation between views is a demo convenience.                                                                                                                                                                                                                                                                                            |
+| DHIS2 / FHIR / LLM assist    | **Plan only.** Not built. No interoperability is claimed.                                                                                                                                                                                                                                                                                                               |
+| Clock quality                | Village and relay nodes are marked "unsynced"; the UI never claims synchronized time.                                                                                                                                                                                                                                                                                   |
 
 ## Evidence labels
 
@@ -95,7 +109,16 @@ Every claim in this repo's docs is labelled:
 - **INFERENCE** — reasoned from facts plus stated assumptions; may be wrong.
 - **UNKNOWN** — not known; needs real-world data or review.
 
-See [VERIFICATION.md](VERIFICATION.md) for test counts, measured byte sizes, accessibility results, and what is still unvalidated. A [screenshot walkthrough](docs/DEMO.md) of the Noor journey is in `docs/`.
+See [VERIFICATION.md](VERIFICATION.md) for test counts, measured byte sizes, accessibility results, and what is still unvalidated. A [screenshot walkthrough](docs/DEMO.md) of the Noor journey and the Stage A demo is in `docs/`.
+
+## Not done (Stage A gaps we did not build)
+
+- Patient-unavailable workflow (pending-reply indicator, no-detail notifications).
+- Integration service (DHIS2 / FHIR adapters, reconciliation).
+- At-rest encryption; real identity and credential management (demo tokens only).
+- A separate gateway process with its own disk (the gateway is a module over journal-derived state).
+- Enforced data retention (the setting is recorded, not enforced); facilities, nodes, staff-access and incident administration.
+- Any evaluation with real users, real radios or in the field.
 
 ## Open decisions (need people, not code)
 

@@ -40,6 +40,32 @@ Directories: `docs/screenshots/mobile-320/` and `docs/screenshots/desktop-1280/`
 
 `40-fail-node-unavailable-draft-not-accepted`, `41-fail-storage-nearly-full`, `42-fail-lost-ack-uncertain`, `43-fail-no-upstream-signal`, `44-fail-power-off-receipt`, `45-fail-expired`, `46-fail-intervention-required`, `47-delayed-clinic-response-ages-only`, `48-withdraw-explained` (all `.png`).
 
+## Spec section 15 demo (outage to lock), SIMULATED
+
+Automated as `e2e/spec-demo.spec.ts` (both viewports). Files in `docs/screenshots/<viewport>/`:
+
+| Step                                                            | File                                           |
+| --------------------------------------------------------------- | ---------------------------------------------- |
+| 1-2. Accepted durably while upstream is disconnected            | `70-spec-1-accepted-while-upstream-down`       |
+| 3. After a service restart, still queued                        | `71-spec-2-after-service-restart-still-queued` |
+| 4-5. Gateway ack; the clinic has NOT acknowledged               | `72-spec-3-gateway-ack-clinic-not-yet`         |
+| Operator: gateway holds the request (upstream side unavailable) | `73-spec-4-operator-gateway-holds-request`     |
+| 8. Duplicate injected, one logical case; clinic ack is separate | `74-spec-5-duplicate-injected-one-case`        |
+| 6. Clinic compares original with the optional draft             | `75-spec-6-clinic-original-and-draft`          |
+| 6. Clinician approves                                           | `76-spec-7-reply-approved-by-clinician`        |
+| 7. Return path interrupted: reply waits in the gateway outbox   | `77-spec-8-return-path-interrupted`            |
+| 7. Reply retrieved at the village after the path is restored    | `78-spec-9-reply-retrieved-at-village`         |
+| 9. Operator view without patient content                        | `79-spec-10-operator-view-no-patient-content`  |
+| 10. Shared device locked                                        | `80-spec-11-device-locked`                     |
+
+## Stage A: clarification, coverage, administration, matrices
+
+`90-clinic-clarification-question-approved`, `91-patient-clinic-question`, `92-clinic-conversation-linked-answer`, `93-clinic-coverage-overdue-stale-statement`, `94-clinic-handover-and-closed-with-outcome`, `95-admin-config-audit-permissions`, `96-capability-matrix` (all `.png`; from `e2e/stage-a-ui.spec.ts`).
+
+## Voice input
+
+`50-voice-D-ready` ... `60-ar-voice-E-confirm-flag-rtl` (consent line, listening, transcript added and edited, flag on the confirm screen, unsupported / denied / mid-capture error fallbacks, Arabic RTL). These use a scripted fake of the Web Speech API: real-browser accuracy is UNKNOWN.
+
 ## Run it yourself
 
 `npm run dev`, open http://localhost:5173, then use `#/sim` to advance virtual time and inject faults, `#/clinic` to approve a reply as the demo clinician.
