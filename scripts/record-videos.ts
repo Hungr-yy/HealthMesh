@@ -135,12 +135,10 @@ async function record(
     recordVideo: { dir: tmp, size: { width: W, height: H } },
   });
   await ctx.addInitScript(OVERLAY);
-  const tPage = Date.now();
   const page = await ctx.newPage();
   const rec = new Recorder(page, ctx);
   await page.goto(`${BASE}/__card`).catch(() => undefined);
   rec.start();
-  const trim = Math.max(0.2, (rec.t0 - tPage) / 1000 - 0.1);
   await script(rec);
   const seconds = rec.elapsed();
   const video = page.video();
