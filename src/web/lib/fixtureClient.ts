@@ -5,6 +5,7 @@ import {
   type CaseView,
   type EventsPage,
   type NodeStatus,
+  type NodeHealth,
   type ReplyView,
   type RequestInput,
   type SubmitResult,
@@ -86,6 +87,20 @@ export class FixtureClient implements HealthMessagingClient {
       storage: { usedBytes: 0, limitBytes: 1, nearlyFull: this.storageFull },
       upstream: 'unknown',
       translationAvailable: true,
+    };
+  }
+  async nodeHealth(): Promise<NodeHealth> {
+    return {
+      simulated: true,
+      nowTick: 0,
+      nowIso: tickToIso(0),
+      availability: { up: this.nodeUp, downUntilTick: null },
+      storage: { usedBytes: 0, limitBytes: 1, nearlyFull: this.storageFull },
+      queue: { waitingToSend: 0, oldestAgeTicks: null },
+      radioAdapter: { name: 'fixture (no radio)', status: 'simulated_link_up' },
+      lastSync: { tick: null, note: 'Static fixtures: no network.' },
+      clock: { quality: 'unsynced' },
+      storageLayout: { sensitiveCases: 'in memory (fixtures)', assetCache: 'none' },
     };
   }
   async markReplyOpened(): Promise<void> {

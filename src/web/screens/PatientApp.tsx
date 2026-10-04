@@ -73,7 +73,11 @@ export function PatientApp({ client, device, onLanguage }: Props) {
    * Set by "Ask a follow-up" (joins the case) or "Send it again" / edit (joins the case AND
    * supersedes a message, creating a linked new version).
    */
-  const [link, setLink] = useState<{ caseId: string; supersedesMessageId?: string } | null>(null);
+  const [link, setLink] = useState<{
+    caseId: string;
+    supersedesMessageId?: string;
+    answersReplyId?: string;
+  } | null>(null);
   const [caseView, setCaseView] = useState<CaseView | null>(null);
   const [nodeStatus, setNodeStatus] = useState<NodeStatus | null>(null);
   const [nodeDown, setNodeDown] = useState(false);
@@ -217,6 +221,7 @@ export function PatientApp({ client, device, onLanguage }: Props) {
       contact: form.contact.trim(),
       language: lang,
       ...(link && !link.supersedesMessageId ? { relatedCaseId: link.caseId } : {}),
+      ...(link?.answersReplyId ? { answersReplyId: link.answersReplyId } : {}),
       ...(link?.supersedesMessageId ? { supersedesMessageId: link.supersedesMessageId } : {}),
       entryMode: session.mode === 'worker' ? 'assisted' : 'typed',
       ...(form.voiceTranscript.trim() ? { enteredByVoice: true } : {}),
@@ -324,6 +329,7 @@ export function PatientApp({ client, device, onLanguage }: Props) {
         return (
           <HomeScreen
             headingRef={headingRef}
+            client={client}
             onAsk={() => {
               setForm((f) => ({ ...f, requestType: null }));
               setScreen('choose');
@@ -448,6 +454,11 @@ export function PatientApp({ client, device, onLanguage }: Props) {
             onBack={() => setScreen('receipt')}
             onFollowUp={() => {
               setLink(activeCase ? { caseId: activeCase.caseId } : null);
+              setForm({ ...EMPTY_FORM, requestType: 'message_clinic' });
+              setScreen('details');
+            }}
+            onAnswer={(replyId) => {
+              setLink(activeCase ? { caseId: activeCase.caseId, answersReplyId: replyId } : null);
               setForm({ ...EMPTY_FORM, requestType: 'message_clinic' });
               setScreen('details');
             }}
@@ -659,11 +670,13 @@ function LanguageScreen({
 // ---------------------------------------------------------------------------- B home
 function HomeScreen({
   headingRef,
+  client,
   onAsk,
   onCheck,
   onHelp,
 }: {
   headingRef: HRef;
+  client: HealthMessagingClient;
   onAsk: () => void;
   onCheck: () => void;
   onHelp: () => void;
@@ -685,7 +698,61 @@ function HomeScreen({
         <Icon name="clock" />
         <span>{t('delayNotice')}</span>
       </div>
+      <NodeHealthPanel client={client} />
     </section>
+  );
+}
+
+/** Village node health indicators (SIMULATED values). Loads only while opened. */
+function NodeHealthPanel({ client }: { client: HealthMessagingClient }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [h, setH] = useState<Awaited<ReturnType<HealthMessagingClient['nodeHealth']>> | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    const load = () =>
+      client
+        .nodeHealth()
+        .then((x) => live && setH(x))
+        .catch(() => live && setH(null));
+    void load();
+    const id = setInterval(() => void load(), 3000);
+    return () => {
+      live = false;
+      clearInterval(id);
+    };
+  }, [open, client]);
+  return (
+    <details
+      className="card"
+      data-testid="node-health"
+      onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
+    >
+      <summary>{t('nhTitle')}</summary>
+      {h ? (
+        <ul className="plain" data-testid="node-health-list">
+          <li>{h.availability.up ? t('nhUp') : t('nhDown')}</li>
+          <li>{t('nhStorage', { used: h.storage.usedBytes, limit: h.storage.limitBytes })}</li>
+          <li>{t('nhQueue', { n: h.queue.waitingToSend })}</li>
+          {h.queue.oldestAgeTicks !== null ? (
+            <li>{t('nhQueueAge', { age: formatAge(h.queue.oldestAgeTicks) })}</li>
+          ) : null}
+          <li>
+            {t('nhRadio', {
+              state: h.radioAdapter.status === 'simulated_link_up' ? t('linkUp') : t('linkDown'),
+            })}
+          </li>
+          <li>
+            {t('nhLast', {
+              when:
+                h.lastSync.tick === null ? t('nhNever') : formatAge(h.nowTick - h.lastSync.tick),
+            })}
+          </li>
+          <li className="small muted">{t('nhSim')}</li>
+        </ul>
+      ) : null}
+    </details>
   );
 }
 
@@ -1377,6 +1444,7 @@ function ReplyScreen({
   onRefresh,
   onBack,
   onFollowUp,
+  onAnswer,
   onFinish,
 }: {
   headingRef: HRef;
@@ -1388,6 +1456,7 @@ function ReplyScreen({
   onRefresh: () => void;
   onBack: () => void;
   onFollowUp: () => void;
+  onAnswer: (replyId: string) => void;
   onFinish: () => void;
 }) {
   const { t } = useI18n();
@@ -1403,6 +1472,16 @@ function ReplyScreen({
         <p data-testid="no-reply">{t('replyNone')}</p>
       ) : (
         <>
+          {reply.kind === 'clarification' ? (
+            <div className="notice" data-testid="clarification-banner">
+              <Icon name="help" />
+              <span>
+                <strong>{t('qTitle')}</strong>
+                <br />
+                {t('qHelp')}
+              </span>
+            </div>
+          ) : null}
           <div className="card" data-testid="reply-card">
             <p
               lang={reply.patientLanguage}
@@ -1472,6 +1551,15 @@ function ReplyScreen({
             </>
           ) : view?.replyOpenedAssistedBy ? (
             <p className="small muted">{t('replyAssisted')}</p>
+          ) : null}
+          {reply.kind === 'clarification' ? (
+            <Button
+              icon="mail"
+              onClick={() => onAnswer(reply.replyId)}
+              data-testid="answer-question"
+            >
+              {t('qAnswer')}
+            </Button>
           ) : null}
           <Button variant="secondary" icon="mail" onClick={onFollowUp} data-testid="ask-followup">
             {t('askFollowUp')}

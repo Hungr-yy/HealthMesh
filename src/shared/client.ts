@@ -9,6 +9,13 @@ import type {
   RequestInput,
   SubmitResult,
   NodeStatus,
+  NodeHealth,
+  AdminConfig,
+  AuditEvent,
+  CloseOutcome,
+  CoverageView,
+  GatewayStatus,
+  ReplyKind,
 } from './types';
 
 /** Credential presented by the village device for a given case. A case reference alone is NOT one. */
@@ -40,7 +47,12 @@ export interface HealthMessagingClient {
   /** Clinician-only. The reply is not sent until this succeeds with an authorized staff token. */
   approveReply(
     caseId: string,
-    input: { text: string; templateId: string | null; inReplyToMessageId: string },
+    input: {
+      text: string;
+      templateId: string | null;
+      inReplyToMessageId: string;
+      kind?: ReplyKind;
+    },
   ): Promise<ReplyView>;
   /**
    * Look a case up by its short reference. A reference alone is NOT authentication: without a
@@ -48,6 +60,8 @@ export interface HealthMessagingClient {
    */
   lookupByReference(ref: string, credential?: CaseCredential): Promise<CaseView>;
   nodeStatus(): Promise<NodeStatus>;
+  /** Village node health indicators (no clinical content). */
+  nodeHealth(): Promise<NodeHealth>;
   markReplyOpened(
     caseId: string,
     credential: CaseCredential,
@@ -65,9 +79,24 @@ export interface ClinicClient {
   setPriority(caseId: string, level: 'routine' | 'soon' | 'urgent', reason: string): Promise<void>;
   saveReplyDraft(caseId: string, text: string, templateId: string | null): Promise<void>;
   templates(): Promise<ReplyTemplate[]>;
+  /** Administrative closure with an explicit outcome. Asserts no health outcome. */
+  closeCase(caseId: string, outcome: CloseOutcome, note: string): Promise<void>;
+  /** Coordinator-only: reassign a case to another clinic reviewer (audited). */
+  handover(caseId: string, toStaffId: string, note: string): Promise<void>;
+  coverage(): Promise<CoverageView>;
+  /** Coordinator-only: STATE whether the clinic is staffed. Never inferred. */
+  setCoverage(staffed: boolean, note: string): Promise<CoverageView>;
 }
 
 export interface OperatorClient {
   overview(): Promise<OperatorOverview>;
   requeue(flowId: string): Promise<void>;
+  gateway(): Promise<GatewayStatus>;
+  audit(): Promise<AuditEvent[]>;
+}
+
+export interface AdminClient {
+  adminConfig(): Promise<AdminConfig>;
+  updateAdminConfig(patch: Partial<AdminConfig>): Promise<AdminConfig>;
+  permissions(): Promise<{ permissions: string[]; roles: Record<string, string[]> }>;
 }

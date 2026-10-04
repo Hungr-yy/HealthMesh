@@ -3,7 +3,10 @@ import { formatAge, tickToIso } from '@shared/time';
 import { previewReplyTranslation } from '@shared/translate';
 import {
   ApiError,
+  CLOSE_OUTCOMES,
+  type CloseOutcome,
   type ClinicCaseView,
+  type ReplyKind,
   type ClinicMessageView,
   type InboxItem,
   type ReplyTemplate,
@@ -55,6 +58,7 @@ export function ClinicApp({ client }: { client: HttpClient }) {
       </p>
       <StaffSignIn client={client} want="clinician" onChange={() => setEpoch((n) => n + 1)} />
       <ErrorNote error={inbox.error} />
+      <CoveragePanel client={client} epoch={epoch} onChanged={() => setEpoch((n) => n + 1)} />
       <div className="clinic-layout">
         <section
           aria-label="Inbox"
@@ -179,6 +183,14 @@ function InboxRow({
         )}
         <span className="badge">{CARE_LABEL[item.care ?? 'awaiting_review']}</span>
         {item.exception ? <span className="badge">{item.exception.replace(/_/g, ' ')}</span> : null}
+        {item.overdue ? (
+          <span className="badge strong" data-testid={`overdue-${item.ref}`}>
+            <Icon name="clock" /> Overdue for review
+          </span>
+        ) : null}
+        {item.closed ? (
+          <span className="badge">Closed: {item.closed.outcome.replace(/_/g, ' ')}</span>
+        ) : null}
       </div>
       <div className="small muted">
         {item.villageLabel} / language {item.language} / {item.versionCount} version(s)
@@ -310,9 +322,48 @@ function CasePane({
           Record priority
         </Button>
       </fieldset>
+      {v.conversation && v.conversation.length > 1 ? (
+        <section aria-label="Conversation" className="card" data-testid="conversation">
+          <h3>Conversation under this case (oldest first)</h3>
+          <ol className="timeline">
+            {v.conversation.map((i) => (
+              <li key={i.id} data-kind={i.kind}>
+                <strong>
+                  {i.kind === 'patient_message'
+                    ? 'Patient message'
+                    : i.kind === 'clinic_question'
+                      ? 'Clinic question (approved)'
+                      : 'Clinic reply (approved)'}
+                </strong>{' '}
+                ({tickToIso(i.atTick).slice(5, 16).replace('T', ' ')} UTC)
+                {i.kind === 'patient_message' && i.linkedTo?.startsWith('reply-')
+                  ? ' - answers the clinic question above'
+                  : ''}
+                : <span lang={i.language}>{i.text}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
       {v.messages.map((m) => (
         <MessageBlock key={m.messageId} m={m} />
       ))}
+      {v.consent && v.consent.length ? (
+        <p className="small muted" data-testid="consent-record">
+          Consent recorded {v.consent.length} time(s); latest wording version{' '}
+          {v.consent[v.consent.length - 1]!.version}, recorded by{' '}
+          {v.consent[v.consent.length - 1]!.recordedBy.replace('_', ' ')}.
+        </p>
+      ) : null}
+      <CaseAdmin
+        v={v}
+        onHandover={(to, note) =>
+          void act(() => client.handover(caseId, to, note), 'Handover recorded')
+        }
+        onClose={(outcome, note) =>
+          void act(() => client.closeCase(caseId, outcome, note), 'Case closed')
+        }
+      />
       <Button variant="secondary" icon="mail" onClick={onReply} data-testid="go-reply">
         Write reply
       </Button>
@@ -449,6 +500,7 @@ function ReplyEditor({
   const [text, setText] = useState(v.replyDraft?.text ?? '');
   const [templateId, setTemplateId] = useState<string | null>(v.replyDraft?.templateId ?? null);
   const [confirmed, setConfirmed] = useState(false);
+  const [kind, setKind] = useState<ReplyKind>('reply');
   const [err, setErr] = useState<ApiError | null>(null);
 
   const latest = v?.messages[v.messages.length - 1];
@@ -470,6 +522,29 @@ function ReplyEditor({
         nothing.
       </p>
       <ErrorNote error={err} />
+      <fieldset className="field" style={{ border: 0, padding: 0 }}>
+        <legend>What are you sending?</legend>
+        <label className="check">
+          <input
+            type="radio"
+            name="reply-kind"
+            checked={kind === 'reply'}
+            onChange={() => setKind('reply')}
+            data-testid="kind-reply"
+          />
+          <span>A reply</span>
+        </label>
+        <label className="check">
+          <input
+            type="radio"
+            name="reply-kind"
+            checked={kind === 'clarification'}
+            onChange={() => setKind('clarification')}
+            data-testid="kind-clarification"
+          />
+          <span>A clarification question (the patient answers with a linked follow-up)</span>
+        </label>
+      </fieldset>
       <div className="field">
         <label htmlFor="tpl">Template (optional)</label>
         <select
@@ -547,7 +622,12 @@ function ReplyEditor({
         disabled={!confirmed || !text.trim() || !inReview}
         onClick={() => {
           client
-            .approveReply(caseId, { text, templateId, inReplyToMessageId: latest.messageId })
+            .approveReply(caseId, {
+              text,
+              templateId,
+              inReplyToMessageId: latest.messageId,
+              kind,
+            })
             .then(() => {
               setErr(null);
               setConfirmed(false);
@@ -557,12 +637,15 @@ function ReplyEditor({
         }}
         data-testid="approve-reply"
       >
-        Approve and send reply
+        {kind === 'clarification' ? 'Approve and send question' : 'Approve and send reply'}
       </Button>
       {approved ? (
         <div className="card" data-testid="approved-record">
-          <strong>Approved reply v{approved.version}</strong> by {approved.author.name} (
-          {approved.author.role}) at {approved.approvedAt.slice(11, 16)} UTC (simulated).
+          <strong>
+            Approved {approved.kind === 'clarification' ? 'question' : 'reply'} v{approved.version}
+          </strong>{' '}
+          by {approved.author.name} ({approved.author.role}) at {approved.approvedAt.slice(11, 16)}{' '}
+          UTC (simulated).
           <br />
           <span className="small muted">
             Return delivery is tracked separately: see the status lines in the case pane.
@@ -570,5 +653,207 @@ function ReplyEditor({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function CaseAdmin({
+  v,
+  onHandover,
+  onClose,
+}: {
+  v: ClinicCaseView;
+  onHandover: (toStaffId: string, note: string) => void;
+  onClose: (outcome: CloseOutcome, note: string) => void;
+}) {
+  const [to, setTo] = useState('staff-baraka');
+  const [hnote, setHnote] = useState('');
+  const [outcome, setOutcome] = useState<CloseOutcome | ''>('');
+  const [cnote, setCnote] = useState('');
+  return (
+    <>
+      <details className="card" data-testid="handover-panel">
+        <summary>Hand over this case (coordinator)</summary>
+        <div className="field">
+          <label htmlFor="ho-to">Hand over to</label>
+          <select id="ho-to" value={to} onChange={(e) => setTo(e.target.value)}>
+            <option value="staff-baraka">Dr. Baraka (synthetic)</option>
+            <option value="staff-amina">Dr. Amina (synthetic)</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="ho-note">Handover note (required, no health details needed)</label>
+          <input
+            id="ho-note"
+            type="text"
+            value={hnote}
+            onChange={(e) => setHnote(e.target.value)}
+          />
+        </div>
+        <Button
+          variant="secondary"
+          inline
+          onClick={() => onHandover(to, hnote)}
+          data-testid="handover"
+        >
+          Record handover
+        </Button>
+      </details>
+      <details className="card" data-testid="close-panel" open={!!v.closed}>
+        <summary>Close this case (administrative)</summary>
+        {v.closed ? (
+          <p data-testid="closed-record">
+            <strong>Closed: {v.closed.outcome.replace(/_/g, ' ')}</strong> by {v.closed.by.name}.{' '}
+            {v.closed.statement}
+          </p>
+        ) : (
+          <>
+            <p className="small muted">
+              Closing records how the clinic handled the message. It does not state any health
+              outcome.
+            </p>
+            <div className="field">
+              <label htmlFor="close-outcome">Outcome (required)</label>
+              <select
+                id="close-outcome"
+                value={outcome}
+                onChange={(e) => setOutcome(e.target.value as CloseOutcome | '')}
+              >
+                <option value="">Choose an outcome</option>
+                {CLOSE_OUTCOMES.map((o) => (
+                  <option key={o} value={o}>
+                    {o.replace(/_/g, ' ')}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="close-note">Note (optional)</label>
+              <input
+                id="close-note"
+                type="text"
+                value={cnote}
+                onChange={(e) => setCnote(e.target.value)}
+              />
+            </div>
+            <Button
+              variant="secondary"
+              inline
+              disabled={!outcome}
+              onClick={() => outcome && onClose(outcome, cnote)}
+              data-testid="close-case"
+            >
+              Close case
+            </Button>
+          </>
+        )}
+      </details>
+    </>
+  );
+}
+
+function CoveragePanel({
+  client,
+  epoch,
+  onChanged,
+}: {
+  client: HttpClient;
+  epoch: number;
+  onChanged: () => void;
+}) {
+  const cov = usePolled(() => client.coverage(), [client, epoch]);
+  const [staffed, setStaffed] = useState(true);
+  const [note, setNote] = useState('');
+  const [err, setErr] = useState<ApiError | null>(null);
+  const announce = useAnnounce();
+  const c = cov.data;
+  return (
+    <details className="card" data-testid="coverage-panel">
+      <summary>
+        Team coverage and overdue messages
+        {c ? ` (${c.overdueCount} overdue, ${c.open} open)` : ''}
+      </summary>
+      <ErrorNote error={err ?? cov.error} />
+      {c ? (
+        <>
+          <p data-testid="coverage-label">{c.displayLabel}</p>
+          {c.note ? <p className="small">Note: {c.note}</p> : null}
+          <dl className="facts">
+            <div className="row">
+              <dt>Service hours (stated)</dt>
+              <dd>{c.serviceHours}</dd>
+            </div>
+            <div className="row">
+              <dt>Review window</dt>
+              <dd>{c.reviewWindowTicks} simulated minutes</dd>
+            </div>
+            <div className="row">
+              <dt>Open / closed / overdue</dt>
+              <dd data-testid="coverage-counts">
+                {c.open} / {c.closed} / {c.overdueCount}
+              </dd>
+            </div>
+          </dl>
+          {c.overdue.length ? (
+            <ul className="timeline" data-testid="overdue-list">
+              {c.overdue.map((o) => (
+                <li key={o.caseId}>
+                  {o.ref}: waiting {formatAge(o.waitingTicks)}, overdue by{' '}
+                  {formatAge(o.overdueByTicks)}
+                  {o.assignee ? `, assigned to ${o.assignee.name}` : ', unassigned'}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {c.handovers.length ? (
+            <ul className="timeline" data-testid="handover-list">
+              {c.handovers.map((h) => (
+                <li key={h.handoverId}>
+                  {h.caseRef}: {h.from.name} handed over to {h.toName}
+                  {h.note ? ` (${h.note})` : ''}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <fieldset style={{ border: '1px solid var(--border-soft)', borderRadius: 8 }}>
+            <legend>Record a staffing statement (coordinator)</legend>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={staffed}
+                onChange={(e) => setStaffed(e.target.checked)}
+                data-testid="coverage-staffed"
+              />
+              <span>The clinic is staffed right now</span>
+            </label>
+            <div className="field">
+              <label htmlFor="cov-note">Note (interruption, handover details)</label>
+              <input
+                id="cov-note"
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
+            <Button
+              variant="secondary"
+              inline
+              data-testid="coverage-save"
+              onClick={() => {
+                client
+                  .setCoverage(staffed, note)
+                  .then(() => {
+                    setErr(null);
+                    announce('Staffing statement recorded');
+                    onChanged();
+                  })
+                  .catch((e: unknown) => setErr(e instanceof ApiError ? e : null));
+              }}
+            >
+              Record statement
+            </Button>
+          </fieldset>
+        </>
+      ) : null}
+    </details>
   );
 }

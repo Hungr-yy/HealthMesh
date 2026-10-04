@@ -6,3 +6,7 @@ package-lock.json
 docs/screenshots
 test-results
 playwright-report
+docs/CAPABILITIES.md
+docs/spec
+docs/measurements
+docs/axe-results.json

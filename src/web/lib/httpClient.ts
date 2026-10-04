@@ -3,6 +3,7 @@ import type {
   ClinicClient,
   HealthMessagingClient,
   OperatorClient,
+  AdminClient,
 } from '@shared/client';
 import {
   ApiError,
@@ -14,13 +15,22 @@ import {
   type ReplyTemplate,
   type EventsPage,
   type NodeStatus,
+  type NodeHealth,
+  type AdminConfig,
+  type AuditEvent,
+  type CloseOutcome,
+  type CoverageView,
+  type GatewayStatus,
+  type ReplyKind,
   type ReplyView,
   type RequestInput,
   type SubmitResult,
 } from '@shared/types';
 
 /** Typed client over the local service. The UI never speaks any radio protocol. */
-export class HttpClient implements HealthMessagingClient, ClinicClient, OperatorClient {
+export class HttpClient
+  implements HealthMessagingClient, ClinicClient, OperatorClient, AdminClient
+{
   private staffToken: string | undefined;
 
   setStaffToken(token: string | undefined): void {
@@ -97,7 +107,12 @@ export class HttpClient implements HealthMessagingClient, ClinicClient, Operator
   }
   approveReply(
     caseId: string,
-    input: { text: string; templateId: string | null; inReplyToMessageId: string },
+    input: {
+      text: string;
+      templateId: string | null;
+      inReplyToMessageId: string;
+      kind?: ReplyKind;
+    },
   ): Promise<ReplyView> {
     return this.call('POST', `/api/clinic/cases/${encodeURIComponent(caseId)}/reply/approve`, {
       body: input,
@@ -106,6 +121,9 @@ export class HttpClient implements HealthMessagingClient, ClinicClient, Operator
   }
   nodeStatus(): Promise<NodeStatus> {
     return this.call('GET', '/api/node/status');
+  }
+  nodeHealth(): Promise<NodeHealth> {
+    return this.call('GET', '/api/node/health');
   }
   async markReplyOpened(
     caseId: string,
@@ -159,6 +177,18 @@ export class HttpClient implements HealthMessagingClient, ClinicClient, Operator
   templates(): Promise<ReplyTemplate[]> {
     return this.call('GET', '/api/clinic/templates', { staff: true });
   }
+  async closeCase(caseId: string, outcome: CloseOutcome, note: string): Promise<void> {
+    await this.clinicPost(caseId, 'close', { outcome, note });
+  }
+  async handover(caseId: string, toStaffId: string, note: string): Promise<void> {
+    await this.clinicPost(caseId, 'handover', { toStaffId, note });
+  }
+  coverage(): Promise<CoverageView> {
+    return this.call('GET', '/api/clinic/coverage', { staff: true });
+  }
+  setCoverage(staffed: boolean, note: string): Promise<CoverageView> {
+    return this.call('POST', '/api/clinic/coverage', { body: { staffed, note }, staff: true });
+  }
 
   // ---------------------------------------------------------------- operator
   overview(): Promise<OperatorOverview> {
@@ -166,6 +196,24 @@ export class HttpClient implements HealthMessagingClient, ClinicClient, Operator
   }
   async requeue(flowId: string): Promise<void> {
     await this.call('POST', '/api/operator/requeue', { body: { flowId }, staff: true });
+  }
+
+  gateway(): Promise<GatewayStatus> {
+    return this.call('GET', '/api/gateway/status', { staff: true });
+  }
+  audit(): Promise<AuditEvent[]> {
+    return this.call('GET', '/api/audit', { staff: true });
+  }
+
+  // ---------------------------------------------------------------- administration
+  adminConfig(): Promise<AdminConfig> {
+    return this.call('GET', '/api/admin/config', { staff: true });
+  }
+  updateAdminConfig(patch: Partial<AdminConfig>): Promise<AdminConfig> {
+    return this.call('POST', '/api/admin/config', { body: patch, staff: true });
+  }
+  permissions(): Promise<{ permissions: string[]; roles: Record<string, string[]> }> {
+    return this.call('GET', '/api/permissions');
   }
 
   // ---------------------------------------------------------------- simulator controls (demo)

@@ -7,6 +7,8 @@ import { AnnounceProvider, Button } from './components/ui';
 import { FixtureClient } from './lib/fixtureClient';
 import { HttpClient } from './lib/httpClient';
 import { DeviceSession } from './lib/session';
+import { AdminApp } from './screens/AdminApp';
+import { CapabilitiesApp } from './screens/CapabilitiesApp';
 import { ClinicApp } from './screens/ClinicApp';
 import { OperatorApp } from './screens/OperatorApp';
 import { PatientApp } from './screens/PatientApp';
@@ -40,7 +42,11 @@ export function App() {
       ? 'operator'
       : route.startsWith('#/sim')
         ? 'sim'
-        : 'patient';
+        : route.startsWith('#/admin')
+          ? 'admin'
+          : route.startsWith('#/capabilities')
+            ? 'capabilities'
+            : 'patient';
   const lang: LangCode | null = area === 'patient' ? patientLang : null;
 
   useEffect(() => {
@@ -76,8 +82,14 @@ export function App() {
             <a href="#/operator" aria-current={area === 'operator' ? 'page' : undefined}>
               Operator
             </a>
+            <a href="#/admin" aria-current={area === 'admin' ? 'page' : undefined}>
+              Admin
+            </a>
             <a href="#/sim" aria-current={area === 'sim' ? 'page' : undefined}>
               Simulator
+            </a>
+            <a href="#/capabilities" aria-current={area === 'capabilities' ? 'page' : undefined}>
+              Capabilities
             </a>
           </nav>
         )}
@@ -104,6 +116,8 @@ export function App() {
         {area === 'clinic' ? <ClinicApp client={http} /> : null}
         {area === 'operator' ? <OperatorApp client={http} /> : null}
         {area === 'sim' ? <SimPanel client={http} /> : null}
+        {area === 'admin' ? <AdminApp client={http} /> : null}
+        {area === 'capabilities' ? <CapabilitiesApp /> : null}
       </main>
     </AnnounceProvider>
   );

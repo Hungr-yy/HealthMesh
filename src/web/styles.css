@@ -492,3 +492,17 @@ select {
   font-size: 1rem;
   margin: 0.5rem 0 0.25rem;
 }
+
+/* ---- details panels, plain lists ---- */
+ul.plain {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+details.card > summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}

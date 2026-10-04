@@ -460,3 +460,18 @@ describe('village node health indicators', () => {
     expect(e.nodeHealth().storageLayout.sensitiveCases).toMatch(/plaintext/);
   });
 });
+
+describe('capability matrix', () => {
+  it('docs/CAPABILITIES.md is in sync with the single source and never overstates', async () => {
+    const fs = await import('node:fs');
+    const { capabilitiesMarkdown, CAPABILITIES } = await import('../src/shared/capabilities');
+    expect(fs.readFileSync('docs/CAPABILITIES.md', 'utf8')).toBe(capabilitiesMarkdown());
+    // nothing is claimed as evaluated beyond automated tests; unbuilt rows have no evaluation
+    for (const c of CAPABILITIES) {
+      if (!c.implemented) expect(c.evaluated).toBe('none');
+    }
+    expect(CAPABILITIES.find((c) => c.capability.startsWith('Canonical model'))!.implemented).toBe(
+      false,
+    );
+  });
+});

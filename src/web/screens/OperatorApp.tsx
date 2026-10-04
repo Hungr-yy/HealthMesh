@@ -1,4 +1,5 @@
 import { formatAge } from '@shared/time';
+import type { GatewayStatus } from '@shared/types';
 import { Button, Icon } from '../components/ui';
 import { StaffSignIn } from '../components/StaffAuth';
 import type { HttpClient } from '../lib/httpClient';
@@ -58,6 +59,7 @@ export function OperatorApp({ client }: { client: HttpClient }) {
               </tbody>
             </table>
           </div>
+          <GatewayPanel client={client} epoch={epoch} />
           <h2>Links</h2>
           <ul className="timeline" data-testid="links-list">
             {o.links.map((l) => (
@@ -158,5 +160,52 @@ export function OperatorApp({ client }: { client: HttpClient }) {
         </>
       ) : null}
     </div>
+  );
+}
+
+function GatewayPanel({ client, epoch }: { client: HttpClient; epoch: number }) {
+  const gw = usePolled(() => client.gateway(), [client, epoch]);
+  const g: GatewayStatus | null = gw.data;
+  if (!g) return null;
+  const upDown = (b: boolean) => (b ? 'available' : 'UNAVAILABLE');
+  return (
+    <section aria-label="Gateway" data-testid="gateway-panel">
+      <h2>Gateway (inbox and outbox)</h2>
+      <p className="small muted">
+        Two independent sides. Radio side: {upDown(g.radio.up)}. Upstream side to the clinic:{' '}
+        {upDown(g.upstream.up)}. Ids and counts only: no patient content.
+      </p>
+      <dl className="facts" data-testid="gateway-counts">
+        <div className="row">
+          <dt>Inbox: held, waiting for upstream</dt>
+          <dd data-testid="gw-held">
+            {g.inbox.held}
+            {g.inbox.oldestHeldAgeTicks !== null
+              ? ` (oldest ${formatAge(g.inbox.oldestHeldAgeTicks)})`
+              : ''}
+          </dd>
+        </div>
+        <div className="row">
+          <dt>Inbox: forwarded to clinic</dt>
+          <dd data-testid="gw-forwarded">{g.inbox.forwarded}</dd>
+        </div>
+        <div className="row">
+          <dt>Outbox: replies waiting for the radio side</dt>
+          <dd data-testid="gw-waiting">
+            {g.outbox.waitingForRadio}
+            {g.outbox.oldestWaitingAgeTicks !== null
+              ? ` (oldest ${formatAge(g.outbox.oldestWaitingAgeTicks)})`
+              : ''}
+          </dd>
+        </div>
+        <div className="row">
+          <dt>Outbox: sent to relay / delivered to village</dt>
+          <dd data-testid="gw-sent">
+            {g.outbox.sentToRelay} / {g.outbox.delivered}
+          </dd>
+        </div>
+      </dl>
+      <p className="small muted">{g.persistence}</p>
+    </section>
   );
 }
