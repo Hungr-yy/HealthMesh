@@ -58,6 +58,12 @@ export class Journal {
     this.size += buf.length;
   }
 
+  /** Demo reset: discard all records. */
+  reset(): void {
+    fs.ftruncateSync(this.fd, 0);
+    this.size = 0;
+  }
+
   close(): void {
     try {
       fs.closeSync(this.fd);

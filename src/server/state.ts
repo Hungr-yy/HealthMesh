@@ -1,5 +1,6 @@
 import type {
   ClinicMessageView,
+  EventStage,
   NodeId,
   ReplyView,
   RequestInput,
@@ -20,6 +21,10 @@ export interface Fault {
   /** 1-based attempt number on that hop. */
   attempt: number;
   fault: 'lose_data' | 'lose_ack';
+  /** Optional narrowing. */
+  messageId?: string;
+  /** Only flows carrying an event of this stage (e.g. the gateway acknowledgement). */
+  carriesStage?: EventStage;
 }
 
 export interface SimConfig {
@@ -140,7 +145,12 @@ export interface State {
   replies: Map<string, ReplyRec>;
   counters: { event: number; flow: number; case: number; reply: number };
   journalBytes: number;
-  restarts: number;
+  nodeLog: Array<{
+    tick: number;
+    kind: 'power_cut' | 'power_restored';
+    recoveredQueueItems?: number;
+    durationTicks?: number;
+  }>;
 }
 
 export function newState(): State {
@@ -165,7 +175,7 @@ export function newState(): State {
     replies: new Map(),
     counters: { event: 0, flow: 0, case: 0, reply: 0 },
     journalBytes: 0,
-    restarts: 0,
+    nodeLog: [],
   };
 }
 

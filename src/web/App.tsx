@@ -7,7 +7,10 @@ import { AnnounceProvider, Button } from './components/ui';
 import { FixtureClient } from './lib/fixtureClient';
 import { HttpClient } from './lib/httpClient';
 import { DeviceSession } from './lib/session';
+import { ClinicApp } from './screens/ClinicApp';
+import { OperatorApp } from './screens/OperatorApp';
 import { PatientApp } from './screens/PatientApp';
+import { SimPanel } from './screens/SimPanel';
 
 function useHashRoute(): string {
   const [hash, setHash] = useState(() => window.location.hash || '#/');
@@ -21,14 +24,24 @@ function useHashRoute(): string {
 
 export function App() {
   const route = useHashRoute();
-  const [lang, setLang] = useState<LangCode | null>(null);
+  const [patientLang, setPatientLang] = useState<LangCode | null>(null);
   const params = new URLSearchParams(window.location.search);
   const useFixtures = params.get('fixtures') === '1';
 
   const fixture = useMemo(() => (useFixtures ? new FixtureClient() : null), [useFixtures]);
-  const client: HealthMessagingClient = useMemo(() => fixture ?? new HttpClient(''), [fixture]);
+  const http = useMemo(() => new HttpClient(''), []);
+  const patientClient: HealthMessagingClient = fixture ?? http;
   const device = useMemo(() => new DeviceSession(window.sessionStorage, window.localStorage), []);
-  const onLanguage = useCallback((l: LangCode | null) => setLang(l), []);
+  const onLanguage = useCallback((l: LangCode | null) => setPatientLang(l), []);
+
+  const area = route.startsWith('#/clinic')
+    ? 'clinic'
+    : route.startsWith('#/operator')
+      ? 'operator'
+      : route.startsWith('#/sim')
+        ? 'sim'
+        : 'patient';
+  const lang: LangCode | null = area === 'patient' ? patientLang : null;
 
   useEffect(() => {
     const l = lang ?? 'en';
@@ -52,11 +65,27 @@ export function App() {
       <UnreviewedBanner lang={lang} />
       <header className="app-header">
         <span className="brand">Rural Health Radio</span>
+        {fixture ? null : (
+          <nav className="nav-links" aria-label="Demo views">
+            <a href="#/" aria-current={area === 'patient' ? 'page' : undefined}>
+              Patient device
+            </a>
+            <a href="#/clinic" aria-current={area === 'clinic' ? 'page' : undefined}>
+              Clinic
+            </a>
+            <a href="#/operator" aria-current={area === 'operator' ? 'page' : undefined}>
+              Operator
+            </a>
+            <a href="#/sim" aria-current={area === 'sim' ? 'page' : undefined}>
+              Simulator
+            </a>
+          </nav>
+        )}
       </header>
-      <main id="main" tabIndex={-1}>
-        {route.startsWith('#/') ? (
+      <main id="main" tabIndex={-1} className={area === 'patient' ? '' : 'wide'}>
+        {area === 'patient' ? (
           <>
-            <PatientApp client={client} device={device} onLanguage={onLanguage} />
+            <PatientApp client={patientClient} device={device} onLanguage={onLanguage} />
             {fixture ? (
               <div className="fixture-bar" data-testid="fixture-bar">
                 <p className="small">Fixture mode (SIMULATION): stage is advanced by hand.</p>
@@ -72,6 +101,9 @@ export function App() {
             ) : null}
           </>
         ) : null}
+        {area === 'clinic' ? <ClinicApp client={http} /> : null}
+        {area === 'operator' ? <OperatorApp client={http} /> : null}
+        {area === 'sim' ? <SimPanel client={http} /> : null}
       </main>
     </AnnounceProvider>
   );

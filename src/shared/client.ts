@@ -58,7 +58,8 @@ export interface HealthMessagingClient {
 
 export interface ClinicClient {
   inbox(sort: 'oldest' | 'priority'): Promise<InboxItem[]>;
-  getCase(caseId: string): Promise<ClinicCaseView>;
+  getClinicCase(caseId: string): Promise<ClinicCaseView>;
+  markRead(caseId: string): Promise<void>;
   claim(caseId: string): Promise<void>;
   startReview(caseId: string): Promise<void>;
   setPriority(caseId: string, level: 'routine' | 'soon' | 'urgent', reason: string): Promise<void>;
@@ -68,4 +69,5 @@ export interface ClinicClient {
 
 export interface OperatorClient {
   overview(): Promise<OperatorOverview>;
+  requeue(flowId: string): Promise<void>;
 }

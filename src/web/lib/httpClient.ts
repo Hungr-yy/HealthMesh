@@ -1,8 +1,17 @@
-import type { CaseCredential, HealthMessagingClient } from '@shared/client';
+import type {
+  CaseCredential,
+  ClinicClient,
+  HealthMessagingClient,
+  OperatorClient,
+} from '@shared/client';
 import {
   ApiError,
   type ApiErrorCode,
   type CaseView,
+  type ClinicCaseView,
+  type InboxItem,
+  type OperatorOverview,
+  type ReplyTemplate,
   type EventsPage,
   type NodeStatus,
   type ReplyView,
@@ -11,8 +20,12 @@ import {
 } from '@shared/types';
 
 /** Typed client over the local service. The UI never speaks any radio protocol. */
-export class HttpClient implements HealthMessagingClient {
-  staffToken: string | undefined;
+export class HttpClient implements HealthMessagingClient, ClinicClient, OperatorClient {
+  private staffToken: string | undefined;
+
+  setStaffToken(token: string | undefined): void {
+    this.staffToken = token;
+  }
 
   constructor(
     private readonly baseUrl = '',
@@ -39,7 +52,7 @@ export class HttpClient implements HealthMessagingClient {
       throw new ApiError('network_error', 'Could not reach the local node');
     }
     const text = await res.text();
-    let json: unknown = undefined;
+    let json: unknown;
     try {
       json = text ? JSON.parse(text) : undefined;
     } catch {
@@ -110,4 +123,85 @@ export class HttpClient implements HealthMessagingClient {
       secret: c.secret,
     });
   }
+
+  // ---------------------------------------------------------------- clinic (staff token)
+  inbox(sort: 'oldest' | 'priority'): Promise<InboxItem[]> {
+    return this.call('GET', `/api/clinic/inbox?sort=${sort}`, { staff: true });
+  }
+  getClinicCase(caseId: string): Promise<ClinicCaseView> {
+    return this.call('GET', `/api/clinic/cases/${encodeURIComponent(caseId)}`, { staff: true });
+  }
+  private clinicPost(caseId: string, action: string, body: unknown = {}): Promise<unknown> {
+    return this.call('POST', `/api/clinic/cases/${encodeURIComponent(caseId)}/${action}`, {
+      body,
+      staff: true,
+    });
+  }
+  async markRead(caseId: string): Promise<void> {
+    await this.clinicPost(caseId, 'read');
+  }
+  async claim(caseId: string): Promise<void> {
+    await this.clinicPost(caseId, 'claim');
+  }
+  async startReview(caseId: string): Promise<void> {
+    await this.clinicPost(caseId, 'start-review');
+  }
+  async setPriority(
+    caseId: string,
+    level: 'routine' | 'soon' | 'urgent',
+    reason: string,
+  ): Promise<void> {
+    await this.clinicPost(caseId, 'priority', { level, reason });
+  }
+  async saveReplyDraft(caseId: string, text: string, templateId: string | null): Promise<void> {
+    await this.clinicPost(caseId, 'reply-draft', { text, templateId });
+  }
+  templates(): Promise<ReplyTemplate[]> {
+    return this.call('GET', '/api/clinic/templates', { staff: true });
+  }
+
+  // ---------------------------------------------------------------- operator
+  overview(): Promise<OperatorOverview> {
+    return this.call('GET', '/api/operator/overview', { staff: true });
+  }
+  async requeue(flowId: string): Promise<void> {
+    await this.call('POST', '/api/operator/requeue', { body: { flowId }, staff: true });
+  }
+
+  // ---------------------------------------------------------------- simulator controls (demo)
+  simState(): Promise<SimState> {
+    return this.call('GET', '/api/sim/state');
+  }
+  simPost(action: string, body: unknown = {}): Promise<SimState> {
+    return this.call('POST', `/api/sim/${action}`, { body });
+  }
+  demoTokens(): Promise<Array<{ role: string; name: string; token: string }>> {
+    return this.call('GET', '/api/sim/demo-tokens');
+  }
+}
+
+/** Shape of GET /api/sim/state (simulator control panel; no patient content). */
+export interface SimState {
+  simulated: true;
+  nowTick: number;
+  nowIso: string;
+  links: boolean[];
+  nodeUp: boolean;
+  nodeDownUntil: number;
+  config: {
+    maxRetries: number;
+    ttlTicks: number;
+    translationAvailable: boolean;
+    lossPct: number;
+    storageLimitBytes: number;
+  };
+  restarts: number;
+  nodeLog: Array<{
+    tick: number;
+    kind: string;
+    recoveredQueueItems?: number;
+    durationTicks?: number;
+  }>;
+  journalBytes: number;
+  flows: Array<{ id: string; kind: string; messageId: string; path: string[] }>;
 }

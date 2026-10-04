@@ -433,3 +433,35 @@ table.data td {
   padding: 0.3rem 0;
   border-bottom: 1px solid var(--border-soft);
 }
+
+/* ---- clinic panes: separate pages on small screens, three columns on desktop ---- */
+.pane {
+  display: none;
+}
+.pane.active {
+  display: block;
+}
+@media (min-width: 64rem) {
+  .pane,
+  .pane.active {
+    display: block;
+  }
+  .pane .back-row {
+    display: none;
+  }
+}
+main.wide {
+  max-width: 90rem;
+}
+.pane[data-pane='list'].active,
+.pane.desktop-only {
+  display: block;
+}
+@media (max-width: 63.99rem) {
+  .pane.desktop-only {
+    display: none;
+  }
+}
+select {
+  min-height: 48px;
+}
