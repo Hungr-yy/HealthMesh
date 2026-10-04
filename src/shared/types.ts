@@ -36,6 +36,11 @@ export interface RequestInput {
   /** Language the patient wrote/spoke in. */
   language: LangCode;
   entryMode: 'typed' | 'assisted';
+  /**
+   * True when the text started as speech-to-text. A flag only: the original transcript stays on
+   * the device and no audio is ever stored. Recognition can be wrong, so staff see the flag.
+   */
+  enteredByVoice?: boolean;
   /** Opaque staff id of the CHW when entryMode === 'assisted'. */
   assistedBy?: string;
   consent: Consent;

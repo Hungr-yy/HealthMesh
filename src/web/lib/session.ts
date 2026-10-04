@@ -25,6 +25,8 @@ export interface DraftForm {
   patientName: string;
   village: string;
   details: string;
+  /** Original speech-to-text transcript (empty when the text was only typed). Same 24 h retention as the draft. */
+  voiceTranscript: string;
   contact: string;
   replyMethod: ReplyMethod;
   consent1: boolean;
@@ -36,6 +38,7 @@ export const EMPTY_FORM: DraftForm = {
   patientName: '',
   village: '',
   details: '',
+  voiceTranscript: '',
   contact: '',
   replyMethod: 'village_device',
   consent1: false,

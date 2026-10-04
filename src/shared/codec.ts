@@ -48,7 +48,8 @@ export function encodeRequest(input: RequestInput, messageId: string): Uint8Arra
     (input.consent.recipientAcknowledged ? 1 : 0) |
     (input.consent.readersAcknowledged ? 2 : 0) |
     (input.consent.replyMethod === 'health_worker_reads' ? 4 : 0) |
-    (input.entryMode === 'assisted' ? 8 : 0);
+    (input.entryMode === 'assisted' ? 8 : 0) |
+    (input.enteredByVoice ? 16 : 0);
   const typeLang = (REQUEST_TYPES.indexOf(input.requestType) << 4) | LANGS.indexOf(input.language);
   const parts: number[] = [VERSION, flags, typeLang, ...uuidToBytes(messageId)];
   const field = (tag: number, value: string | undefined) => {
@@ -104,6 +105,7 @@ export function decodeRequest(bytes: Uint8Array): { messageId: string; input: Re
       replyMethod,
     },
   };
+  if (flags & 16) input.enteredByVoice = true;
   if (vals[TAGS.assistedBy]) input.assistedBy = vals[TAGS.assistedBy] as string;
   if (vals[TAGS.supersedes]) input.supersedesMessageId = vals[TAGS.supersedes] as string;
   if (vals[TAGS.related]) input.relatedCaseId = vals[TAGS.related] as string;

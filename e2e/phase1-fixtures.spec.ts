@@ -31,9 +31,11 @@ test.describe('Phase 1: static flows (fixture client)', () => {
     await expectNoHorizontalScroll(page);
     await kbActivate(page, '[data-testid="type-follow_up"]');
 
-    // D details (typing, speaking unavailable)
+    // D details (typing; voice is optional and either offered or explained as unavailable)
     expect(await screen(page)).toBe('details');
-    await expect(page.getByTestId('speak-unavailable')).toBeVisible();
+    await expect(
+      page.getByTestId('voice-start').or(page.getByTestId('speak-unavailable')),
+    ).toBeVisible();
     await tabTo(page, '#details');
     await page.keyboard.type('I need a follow-up appointment next week. My medicine has run out.');
     await expectNoHorizontalScroll(page);

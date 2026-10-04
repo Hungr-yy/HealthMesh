@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useState, type ReactNode, type Ref } from 'react';
 
 export type IconName =
   | 'check'
@@ -15,7 +15,9 @@ export type IconName =
   | 'help'
   | 'send'
   | 'search'
-  | 'flag';
+  | 'flag'
+  | 'mic'
+  | 'stop';
 
 const PATHS: Record<IconName, string> = {
   check: 'M5 12.5l4.2 4.2L19 7',
@@ -33,6 +35,8 @@ const PATHS: Record<IconName, string> = {
   send: 'M3 12l18-8-6 16-3-7-9-1z',
   search: 'M11 4a7 7 0 100 14 7 7 0 000-14zM16 16l5 5',
   flag: 'M5 21V4M5 4h12l-2 4 2 4H5',
+  mic: 'M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM5 11a7 7 0 0014 0M12 18v3M9 21h6',
+  stop: 'M6 6h12v12H6z',
 };
 
 export function Icon({ name }: { name: IconName }) {
@@ -64,6 +68,7 @@ interface ButtonProps {
   'aria-pressed'?: boolean;
   'data-testid'?: string;
   lang?: string;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button({

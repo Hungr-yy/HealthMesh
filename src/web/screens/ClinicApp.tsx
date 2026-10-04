@@ -339,8 +339,12 @@ function MessageBlock({ m }: { m: ClinicMessageView }) {
       </blockquote>
       <p className="small muted">
         Written in {m.original.language}, entered{' '}
-        {m.original.entryMode === 'assisted' ? 'with a health worker' : 'by typing'}. Name:{' '}
-        {m.original.patientName || 'Not provided'}. Village: {m.original.village || 'Not provided'}.
+        {m.original.entryMode === 'assisted' ? 'with a health worker' : 'by typing'}
+        {m.original.enteredByVoice
+          ? ' (started as speech-to-text; may contain recognition errors)'
+          : ''}
+        . Name: {m.original.patientName || 'Not provided'}. Village:{' '}
+        {m.original.village || 'Not provided'}.
       </p>
       {m.translation.status === 'not_needed' ? null : (
         <div className="notice" data-testid="clinic-translation">

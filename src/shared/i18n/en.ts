@@ -53,6 +53,32 @@ export const en = {
   contactLabel: 'How can the clinic reach you? (optional)',
   speakUnavailable:
     'Speaking is not available on this device. Please type, or ask a health worker to type for you.',
+  speechLocale: 'en-US',
+  voiceSpeak: 'Speak instead of typing',
+  voiceStop: 'Stop',
+  voiceListening: 'Listening. Speak now, then press Stop.',
+  voiceHearing: 'Hearing:',
+  voiceStoppedAdded: 'Stopped. What we heard was added to the box above. Please check it.',
+  voiceStoppedNothing: 'Stopped. Nothing was heard. You can try again or type.',
+  voiceQuality:
+    'Speech recognition can make mistakes, especially in Swahili and Arabic (not verified). Always check the text.',
+  voiceErrDenied:
+    'The microphone is not allowed. You can allow it in your browser settings, or just type below.',
+  voiceErrNoSpeech: 'We did not hear anything. Try again, or type below.',
+  voiceErrAudio: 'No microphone was found. Please type below.',
+  voiceErrNetwork:
+    'Speech recognition lost its connection. What was already added is kept. Try again, or type below.',
+  voiceErrLang: 'Speech recognition does not support this language here. Please type below.',
+  voiceErrOther: 'Speech recognition stopped because of a problem. Please type below.',
+  voiceConsentTitle: 'Before you speak',
+  voiceConsent:
+    'Your browser may send what you say to another company to turn it into text. We do not record or keep any audio. Only the text goes into the box, and you can edit it.',
+  voiceConsentContinue: 'I understand, use the microphone',
+  voiceConsentCancel: 'No, I will type',
+  voiceFlag: 'Entered by voice - check it is correct',
+  voiceOriginalTitle: 'What speech recognition heard (original transcript)',
+  voiceEdited: 'You changed the text after speaking. The box above shows your changes.',
+  voiceUnchanged: 'The text was not changed after speaking.',
   draftSaved: 'Draft saved on this device',
   draftRetention: 'Drafts are removed after 24 hours or when you lock this device.',
   detailsRequired: 'Please write a few words so the clinic knows what you need.',

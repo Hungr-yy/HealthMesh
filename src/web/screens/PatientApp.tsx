@@ -17,6 +17,8 @@ import {
   type RequestInput,
 } from '@shared/types';
 import { NetworkNote } from '../components/Chrome';
+import { VoiceInput } from '../components/VoiceInput';
+import { createSpeechAdapter, type SpeechAdapter } from '../lib/speech';
 import { Button, Field, Icon, useAnnounce, type IconName } from '../components/ui';
 import { I18nContext, makeI18n, useI18n } from '../lib/i18nContext';
 import {
@@ -100,6 +102,25 @@ export function PatientApp({ client, device, onLanguage }: Props) {
     [device],
   );
 
+  const speech = useMemo<SpeechAdapter>(() => createSpeechAdapter(), []);
+  // Consent for browser speech recognition is asked once per page load and cleared on patient switch.
+  const [voiceConsented, setVoiceConsented] = useState(false);
+  const appendVoice = useCallback(
+    (text: string) => {
+      setForm((prev) => {
+        const join = (a: string) => (a && !/\s$/.test(a) ? `${a} ${text}` : `${a}${text}`);
+        const next = {
+          ...prev,
+          details: join(prev.details),
+          voiceTranscript: join(prev.voiceTranscript),
+        };
+        device.saveDraft(next);
+        return next;
+      });
+    },
+    [device],
+  );
+
   const updateForm = useCallback(
     (patch: Partial<DraftForm>) => {
       setForm((prev) => {
@@ -168,6 +189,7 @@ export function PatientApp({ client, device, onLanguage }: Props) {
     const cleared = device.lock();
     setSession(cleared);
     setForm(EMPTY_FORM);
+    setVoiceConsented(false);
     setCaseView(null);
     setSubmit({ kind: 'idle' });
     setLink(null);
@@ -197,6 +219,7 @@ export function PatientApp({ client, device, onLanguage }: Props) {
       ...(link && !link.supersedesMessageId ? { relatedCaseId: link.caseId } : {}),
       ...(link?.supersedesMessageId ? { supersedesMessageId: link.supersedesMessageId } : {}),
       entryMode: session.mode === 'worker' ? 'assisted' : 'typed',
+      ...(form.voiceTranscript.trim() ? { enteredByVoice: true } : {}),
       ...(session.mode === 'worker' ? { assistedBy: session.workerLabel || 'health worker' } : {}),
       consent: {
         recipientAcknowledged: form.consent1,
@@ -342,6 +365,10 @@ export function PatientApp({ client, device, onLanguage }: Props) {
             headingRef={headingRef}
             form={form}
             onChange={updateForm}
+            speech={speech}
+            voiceConsented={voiceConsented}
+            onVoiceConsent={() => setVoiceConsented(true)}
+            onVoiceText={appendVoice}
             onBack={() => setScreen('choose')}
             onNext={() => setScreen('confirm')}
           />
@@ -351,6 +378,7 @@ export function PatientApp({ client, device, onLanguage }: Props) {
           <ConfirmScreen
             headingRef={headingRef}
             input={buildInput()}
+            voiceTranscript={form.voiceTranscript}
             translationAvailable={nodeStatus?.translationAvailable ?? true}
             onBack={() => setScreen('details')}
             onNext={() => setScreen('review')}
@@ -793,12 +821,20 @@ function DetailsScreen({
   headingRef,
   form,
   onChange,
+  speech,
+  voiceConsented,
+  onVoiceConsent,
+  onVoiceText,
   onBack,
   onNext,
 }: {
   headingRef: HRef;
   form: DraftForm;
   onChange: (p: Partial<DraftForm>) => void;
+  speech: SpeechAdapter;
+  voiceConsented: boolean;
+  onVoiceConsent: () => void;
+  onVoiceText: (text: string) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
@@ -838,7 +874,11 @@ function DetailsScreen({
           aria-describedby="details-hint"
           onChange={(e) => {
             setErr(false);
-            onChange({ details: e.target.value });
+            onChange({
+              details: e.target.value,
+              // Clearing the box entirely starts over: the text is no longer voice-originated.
+              ...(e.target.value.trim() ? {} : { voiceTranscript: '' }),
+            });
           }}
         />
       </Field>
@@ -851,10 +891,12 @@ function DetailsScreen({
           onChange={(e) => onChange({ contact: e.target.value })}
         />
       </Field>
-      <div className="notice" data-testid="speak-unavailable">
-        <Icon name="info" />
-        <span>{t('speakUnavailable')}</span>
-      </div>
+      <VoiceInput
+        adapter={speech}
+        consented={voiceConsented}
+        onConsent={onVoiceConsent}
+        onTranscript={onVoiceText}
+      />
       <p className="small muted" data-testid="draft-saved">
         <Icon name="check" /> {t('draftSaved')}. {t('draftRetention')}
       </p>
@@ -899,12 +941,15 @@ function fieldLabel(f: DraftField, t: ReturnType<typeof useI18n>['t']): string {
 function ConfirmScreen({
   headingRef,
   input,
+  voiceTranscript,
   translationAvailable,
   onBack,
   onNext,
 }: {
   headingRef: HRef;
   input: RequestInput;
+  /** Original speech-to-text transcript kept on this device ('' when typed). */
+  voiceTranscript: string;
   translationAvailable: boolean;
   onBack: () => void;
   onNext: () => void;
@@ -929,6 +974,26 @@ function ConfirmScreen({
       >
         {input.details}
       </blockquote>
+      {input.enteredByVoice && voiceTranscript ? (
+        <div className="notice voice-flag" data-testid="voice-flag">
+          <Icon name="mic" />
+          <div>
+            <strong>{t('voiceFlag')}</strong>
+            <p className="small">
+              {voiceTranscript === input.details ? t('voiceUnchanged') : t('voiceEdited')}
+            </p>
+            <h3>{t('voiceOriginalTitle')}</h3>
+            <blockquote
+              className="original"
+              lang={input.language}
+              dir={lang === 'ar' ? 'rtl' : 'ltr'}
+              data-testid="voice-original"
+            >
+              {voiceTranscript}
+            </blockquote>
+          </div>
+        </div>
+      ) : null}
       <h2>{t('ourReading')}</h2>
       <div className="card">
         <dl className="facts" data-testid="readback">

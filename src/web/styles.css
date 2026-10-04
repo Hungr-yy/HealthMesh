@@ -465,3 +465,30 @@ main.wide {
 select {
   min-height: 48px;
 }
+
+/* ---- voice input ---- */
+.voice {
+  margin-block: 0.75rem;
+}
+.voice .btn {
+  width: 100%;
+  margin-block: 0.25rem;
+}
+.voice-status:empty,
+.voice-error-slot:empty {
+  display: none;
+}
+.voice-status {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0.5rem 0;
+  font-weight: 600;
+}
+.voice-consent p {
+  margin: 0.25rem 0 0.75rem;
+}
+.voice-flag h3 {
+  font-size: 1rem;
+  margin: 0.5rem 0 0.25rem;
+}

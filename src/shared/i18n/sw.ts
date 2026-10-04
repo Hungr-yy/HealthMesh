@@ -56,6 +56,34 @@ export const sw: Record<MessageKey, string> = {
   contactLabel: 'Kliniki inawezaje kukufikia? (si lazima)',
   speakUnavailable:
     'Kuzungumza hakupatikani kwenye kifaa hiki. Tafadhali andika, au mwombe mhudumu wa afya akuandikie.',
+  speechLocale: 'sw-KE',
+  voiceSpeak: 'Ongea badala ya kuandika',
+  voiceStop: 'Simamisha',
+  voiceListening: 'Tunasikiliza. Ongea sasa, kisha bonyeza Simamisha.',
+  voiceHearing: 'Tunasikia:',
+  voiceStoppedAdded:
+    'Imesimama. Tulichosikia kimeongezwa kwenye kisanduku hapo juu. Tafadhali kikague.',
+  voiceStoppedNothing: 'Imesimama. Hakuna kilichosikika. Jaribu tena au andika.',
+  voiceQuality:
+    'Kutambua sauti kunaweza kukosea, hasa kwa Kiswahili na Kiarabu (haijathibitishwa). Daima kagua maandishi.',
+  voiceErrDenied:
+    'Kipaza sauti hakiruhusiwi. Unaweza kukiruhusu kwenye mipangilio ya kivinjari, au andika tu hapa chini.',
+  voiceErrNoSpeech: 'Hatukusikia chochote. Jaribu tena, au andika hapa chini.',
+  voiceErrAudio: 'Hakuna kipaza sauti kilichopatikana. Tafadhali andika hapa chini.',
+  voiceErrNetwork:
+    'Utambuzi wa sauti umepoteza muunganisho. Kilichoongezwa tayari kimehifadhiwa. Jaribu tena, au andika hapa chini.',
+  voiceErrLang: 'Utambuzi wa sauti hauauni lugha hii hapa. Tafadhali andika hapa chini.',
+  voiceErrOther: 'Utambuzi wa sauti umesimama kwa sababu ya tatizo. Tafadhali andika hapa chini.',
+  voiceConsentTitle: 'Kabla ya kuongea',
+  voiceConsent:
+    'Kivinjari chako kinaweza kutuma unachosema kwa kampuni nyingine ili kukigeuza kuwa maandishi. Haturekodi wala kuhifadhi sauti. Maandishi pekee huingia kwenye kisanduku, nawe unaweza kuyahariri.',
+  voiceConsentContinue: 'Naelewa, tumia kipaza sauti',
+  voiceConsentCancel: 'Hapana, nitaandika',
+  voiceFlag: 'Imeingizwa kwa sauti - hakikisha ni sahihi',
+  voiceOriginalTitle: 'Kilichosikika na utambuzi wa sauti (nakala asili)',
+  voiceEdited:
+    'Ulibadilisha maandishi baada ya kuongea. Kisanduku hapo juu kinaonyesha mabadiliko yako.',
+  voiceUnchanged: 'Maandishi hayakubadilishwa baada ya kuongea.',
   draftSaved: 'Rasimu imehifadhiwa kwenye kifaa hiki',
   draftRetention: 'Rasimu hufutwa baada ya saa 24 au ukifunga kifaa hiki.',
   detailsRequired: 'Tafadhali andika maneno machache ili kliniki ijue unahitaji nini.',
