@@ -23,9 +23,10 @@ export function newMsg(input: Partial<RequestInput> = {}) {
 export async function startService(
   dataDir: string,
   port: number,
+  extraEnv: Record<string, string> = {},
 ): Promise<{ proc: ChildProcess; url: string }> {
   const proc = fork(path.resolve('node_modules/tsx/dist/cli.mjs'), ['src/server/index.ts'], {
-    env: { ...process.env, RHR_DATA_DIR: dataDir, RHR_PORT: String(port) },
+    env: { ...process.env, RHR_DATA_DIR: dataDir, RHR_PORT: String(port), ...extraEnv },
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
   const url = `http://127.0.0.1:${port}`;

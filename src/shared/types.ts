@@ -48,6 +48,8 @@ export interface RequestInput {
   supersedesMessageId?: string;
   /** Follow-up on an existing case (new message, not an edit). */
   relatedCaseId?: string;
+  /** The approved clinic question this message answers (clarification workflow). */
+  answersReplyId?: string;
 }
 
 // ---------------------------------------------------------------- transport model
@@ -150,12 +152,31 @@ export interface StaffRef {
   role: StaffRole;
   clinic: string;
 }
-export type StaffRole = 'clinician' | 'coordinator' | 'chw' | 'operator';
+/**
+ * Service roles. 'clinician' = clinic reviewer. The patient is not a staff role: a patient (or CHW
+ * on a village device) proves access to a case with its case secret. Integration accounts are
+ * plan-only (no integration service is built).
+ */
+export type StaffRole = 'clinician' | 'coordinator' | 'chw' | 'operator' | 'admin';
+
+/** 'clarification' = an APPROVED question from the clinic; the patient's answer is a linked follow-up. */
+export type ReplyKind = 'reply' | 'clarification';
+
+/** Administrative closure outcomes. Closing asserts NO health outcome. */
+export const CLOSE_OUTCOMES = [
+  'appointment_arranged',
+  'referral_question_answered',
+  'follow_up_needed',
+  'withdrawn_by_requester',
+  'no_clinic_action_possible',
+] as const;
+export type CloseOutcome = (typeof CLOSE_OUTCOMES)[number];
 
 export interface ReplyView {
   replyId: string;
   caseId: string;
   inReplyToMessageId: string;
+  kind: ReplyKind;
   version: number;
   /** Text exactly as approved by staff. */
   text: string;
@@ -214,6 +235,54 @@ export interface InboxItem {
   userAction: 'reply_opened' | null;
   exception: ExceptionState | null;
   versionCount: number;
+  /** Administrative closure, if any. */
+  closed?: CaseClosure | null;
+  /** Waiting longer than the review window with no approved reply (not applicable when closed). */
+  overdue?: boolean;
+}
+
+export interface CaseClosure {
+  outcome: CloseOutcome;
+  note: string;
+  by: StaffRef;
+  atTick: number;
+  /** Fixed statement: closure is administrative and asserts no health outcome. */
+  statement: string;
+}
+
+/** Consent as recorded when the request was accepted (no clinical content). */
+export interface ConsentRecord {
+  consentId: string;
+  caseId: string;
+  messageId: string;
+  /** Version of the consent wording in force at acceptance (admin-managed). */
+  version: string;
+  atTick: number;
+  recipientAcknowledged: boolean;
+  readersAcknowledged: boolean;
+  replyMethod: ReplyMethod;
+  recordedBy: 'patient' | 'health_worker';
+}
+
+/** Audit events carry actors, actions and identifiers - never message text or names. */
+export interface AuditEvent {
+  auditId: string;
+  atTick: number;
+  at: string;
+  actor: { kind: 'staff' | 'village_device' | 'system'; role?: StaffRole; staffId?: string };
+  action: string;
+  caseRef?: string;
+  detail?: Record<string, string | number | boolean | null>;
+}
+
+export interface ConversationItem {
+  kind: 'patient_message' | 'clinic_reply' | 'clinic_question';
+  id: string;
+  atTick: number;
+  text: string;
+  language: LangCode;
+  /** Link: which clinic question a patient message answers, or which message a reply answers. */
+  linkedTo: string | null;
 }
 
 export interface StaffPriority {
@@ -244,6 +313,10 @@ export interface ClinicCaseView {
   assignee: StaffRef | null;
   priority: StaffPriority | null;
   replies: ReplyView[];
+  /** Chronological conversation under this case (patient messages and approved clinic replies). */
+  conversation?: ConversationItem[];
+  consent?: ConsentRecord[];
+  closed?: CaseClosure | null;
   replyDraft: { text: string; templateId: string | null; savedBy: StaffRef; atTick: number } | null;
   nowTick: number;
   nowIso: string;
@@ -326,4 +399,98 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+// ---------------------------------------------------------------- gateway, coverage, node health
+
+/** Gateway module view. Custody metadata only: never names or message text. */
+export interface GatewayStatus {
+  simulated: true;
+  nowTick: number;
+  /** Radio side: valley relay <-> gateway link. Independent of the upstream side. */
+  radio: { up: boolean; label: string };
+  /** Upstream side: gateway <-> clinic (internet in a real deployment; simulated here). */
+  upstream: { up: boolean; label: string };
+  inbox: {
+    /** Received by the gateway and persisted, not yet forwarded to the clinic. */
+    held: number;
+    forwarded: number;
+    oldestHeldAgeTicks: number | null;
+    items: Array<{
+      messageIdShort: string;
+      state: 'held_upstream_unavailable' | 'forwarding' | 'forwarded';
+      receivedAtTick: number;
+      forwardedAtTick: number | null;
+    }>;
+  };
+  outbox: {
+    /** Approved replies persisted at the gateway, waiting for the radio side. */
+    waitingForRadio: number;
+    sentToRelay: number;
+    delivered: number;
+    oldestWaitingAgeTicks: number | null;
+    items: Array<{
+      replyIdShort: string;
+      state: 'waiting_radio_unavailable' | 'sending' | 'sent_to_relay' | 'delivered_to_village';
+      enqueuedAtTick: number;
+    }>;
+  };
+  persistence: string;
+}
+
+export interface CoverageView {
+  simulated: true;
+  nowTick: number;
+  staffed: boolean;
+  /** When someone last STATED staffing. A stale statement is not live staffing evidence. */
+  statedAtTick: number | null;
+  statedBy: StaffRef | null;
+  note: string;
+  statementAgeTicks: number | null;
+  stale: boolean;
+  staleAfterTicks: number;
+  displayLabel: string;
+  serviceHours: string;
+  reviewWindowTicks: number;
+  open: number;
+  closed: number;
+  overdueCount: number;
+  /** Case list is empty for roles without clinical access (operator). */
+  overdue: Array<{
+    caseId: string;
+    ref: string;
+    waitingTicks: number;
+    overdueByTicks: number;
+    assignee: StaffRef | null;
+  }>;
+  handovers: Array<{
+    handoverId: string;
+    atTick: number;
+    from: StaffRef;
+    toStaffId: string | null;
+    toName: string;
+    caseRef: string;
+    note: string;
+  }>;
+}
+
+export interface NodeHealth {
+  simulated: true;
+  nowTick: number;
+  nowIso: string;
+  availability: { up: boolean; downUntilTick: number | null };
+  storage: { usedBytes: number; limitBytes: number; nearlyFull: boolean };
+  queue: { waitingToSend: number; oldestAgeTicks: number | null };
+  radioAdapter: { name: string; status: 'simulated_link_up' | 'simulated_link_down' };
+  lastSync: { tick: number | null; note: string };
+  clock: { quality: ClockQuality };
+  storageLayout: { sensitiveCases: string; assetCache: string };
+}
+
+export interface AdminConfig {
+  consentVersion: string;
+  serviceHours: string;
+  reviewWindowTicks: number;
+  retentionDays: number;
+  facility: string;
 }

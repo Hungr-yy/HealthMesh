@@ -292,13 +292,18 @@ describe('Phase 3: relay simulator', () => {
     until(e, () => last(node(e, m.caseId, m.secret)).tracks.transport === 'clinic_received');
     const body = { text: 'Come on Thursday.', templateId: null, inReplyToMessageId: m.messageId };
 
-    e.saveReplyDraft(coordinator, m.caseId, body.text, null); // draft is not a reply
+    // a coordinator may not draft clinical replies; a clinician's draft is not a reply
+    expect(() => e.saveReplyDraft(coordinator, m.caseId, body.text, null)).toThrowError(
+      /not permitted/i,
+    );
+    e.saveReplyDraft(clinician, m.caseId, body.text, null);
     expect(() => e.approveReply(null, m.caseId, body)).toThrowError(/sign-in required/i);
     expect(() => e.approveReply(coordinator, m.caseId, body)).toThrowError(/not permitted/i);
     expect(() => e.approveReply(ref('chw'), m.caseId, body)).toThrowError();
     expect(() => e.approveReply(ref('operator'), m.caseId, body)).toThrowError();
     expect(() => e.approveReply(clinician, m.caseId, body)).toThrowError(/start the review/i);
-    e.startReview(coordinator, m.caseId);
+    expect(() => e.startReview(coordinator, m.caseId)).toThrowError(/not permitted/i);
+    e.startReview(clinician, m.caseId);
     expect(() => e.approveReply(coordinator, m.caseId, body)).toThrowError(/not permitted/i);
 
     run(e, 500);

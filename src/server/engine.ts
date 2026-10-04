@@ -6,7 +6,17 @@ import { translateReplyForPatient, translateToEnglish } from '@shared/translate'
 import { deriveTracks, reconcileEvents } from '@shared/tracks';
 import {
   ApiError,
+  type AdminConfig,
   type ApiErrorCode,
+  type AuditEvent,
+  type CaseClosure,
+  type CloseOutcome,
+  CLOSE_OUTCOMES,
+  type ConversationItem,
+  type CoverageView,
+  type GatewayStatus,
+  type NodeHealth,
+  type ReplyKind,
   type CaseView,
   type CareState,
   type ClinicCaseView,
@@ -29,10 +39,14 @@ import {
   type TransportEvent,
 } from '@shared/types';
 import { hashSecret, secretMatches } from './auth';
+import { FIXTURE_STAFF } from '@shared/fixtures';
+import { gatewayStatus } from './gateway';
+import { can, type Permission } from './permissions';
 import { Journal } from './journal';
 import { newFlow, stepTick, UP, DOWN } from './sim';
 import {
   newState,
+  type CaseRec,
   type Flow,
   type MessageRec,
   type ReplyRec,
@@ -69,7 +83,7 @@ export type Command =
   | { t: 'power_cut'; durationTicks: number }
   | { t: 'config'; patch: Partial<SimConfig> }
   | { t: 'battery'; node: NodeId; percent: number }
-  | { t: 'requeue'; flowId: string }
+  | { t: 'requeue'; flowId: string; staff?: StaffRef }
   | { t: 'read'; caseId: string }
   | { t: 'claim'; caseId: string; staff: StaffRef }
   | { t: 'start_review'; caseId: string; staff: StaffRef }
@@ -88,9 +102,21 @@ export type Command =
       messageId: string;
       text: string;
       templateId: string | null;
+      kind?: ReplyKind;
     }
   | { t: 'reply_opened'; caseId: string; assistedBy: string | null }
-  | { t: 'withdraw'; caseId: string };
+  | { t: 'withdraw'; caseId: string }
+  | { t: 'coverage_set'; staff: StaffRef; staffed: boolean; note: string }
+  | {
+      t: 'handover';
+      staff: StaffRef;
+      caseId: string;
+      toStaffId: string | null;
+      toName: string;
+      note: string;
+    }
+  | { t: 'close_case'; staff: StaffRef; caseId: string; outcome: CloseOutcome; note: string }
+  | { t: 'admin_config'; staff: StaffRef; patch: Partial<AdminConfig> };
 
 export const TEMPLATES: ReplyTemplate[] = [
   {
@@ -172,11 +198,13 @@ export class Engine {
         s.battery[cmd.node] = { percent: cmd.percent, reportedAtTick: s.tick };
         return;
       case 'requeue':
+        if (cmd.staff) this.audit(cmd.staff, 'flow_requeued', null, { flowId: cmd.flowId });
         return this.applyRequeue(cmd.flowId);
       case 'read':
         return this.applyRead(cmd.caseId);
       case 'claim':
         s.cases.get(cmd.caseId)!.assignee = cmd.staff;
+        this.audit(cmd.staff, 'case_claimed', cmd.caseId);
         return;
       case 'start_review':
         return this.applyStartReview(cmd.caseId, cmd.staff);
@@ -187,6 +215,7 @@ export class Engine {
           reason: cmd.reason,
           atTick: s.tick,
         };
+        this.audit(cmd.staff, 'priority_set', cmd.caseId, { level: cmd.level });
         return;
       case 'reply_draft':
         s.cases.get(cmd.caseId)!.replyDraft = {
@@ -195,6 +224,7 @@ export class Engine {
           savedBy: cmd.staff,
           atTick: s.tick,
         };
+        this.audit(cmd.staff, 'reply_draft_saved', cmd.caseId);
         return;
       case 'approve':
         return this.applyApprove(cmd);
@@ -202,6 +232,28 @@ export class Engine {
         return this.applyReplyOpened(cmd.caseId, cmd.assistedBy);
       case 'withdraw':
         return this.applyWithdraw(cmd.caseId);
+      case 'coverage_set':
+        s.coverage = {
+          staffed: cmd.staffed,
+          statedAtTick: s.tick,
+          statedBy: cmd.staff,
+          note: cmd.note,
+        };
+        this.audit(cmd.staff, 'coverage_stated', null, {
+          staffed: cmd.staffed,
+          noteLength: cmd.note.length,
+        });
+        return;
+      case 'handover':
+        return this.applyHandover(cmd);
+      case 'close_case':
+        return this.applyClose(cmd);
+      case 'admin_config':
+        s.admin = { ...s.admin, ...cmd.patch };
+        this.audit(cmd.staff, 'config_changed', null, {
+          fields: Object.keys(cmd.patch).join(','),
+        });
+        return;
     }
   }
 
@@ -323,6 +375,15 @@ export class Engine {
         throw new EngineError('unauthorized', 'Credential does not match this case', 401);
       caseId = c.caseId;
     }
+    if (input.answersReplyId) {
+      const r = this.state.replies.get(input.answersReplyId);
+      if (!caseId || !r || r.caseId !== caseId || r.deliveredToNodeTick === null)
+        throw new EngineError(
+          'bad_request',
+          'answersReplyId must be a reply that has arrived on this device, in the same case',
+          400,
+        );
+    }
 
     if (this.storage().nearlyFull)
       throw new EngineError(
@@ -373,6 +434,7 @@ export class Engine {
         replyDraft: null,
         replyIds: [],
         replyOpenedAssistedBy: null,
+        closed: null,
       };
       s.cases.set(caseId, c);
       s.refToCase.set(ref, caseId);
@@ -404,6 +466,33 @@ export class Engine {
       detail: { bytes: msg.encodedBytes },
       knownAtNode: true,
     });
+    // Consent is recorded as its own record, with the wording version in force right now.
+    s.counters.consent += 1;
+    s.consents.push({
+      consentId: `consent-${s.counters.consent}`,
+      caseId: c.caseId,
+      messageId: msg.messageId,
+      version: s.admin.consentVersion,
+      atTick: s.tick,
+      recipientAcknowledged: cmd.input.consent.recipientAcknowledged,
+      readersAcknowledged: cmd.input.consent.readersAcknowledged,
+      replyMethod: cmd.input.consent.replyMethod,
+      recordedBy: cmd.input.entryMode === 'assisted' ? 'health_worker' : 'patient',
+    });
+    this.audit('village_device', 'request_accepted', c.caseId, {
+      version,
+      entry: cmd.input.entryMode,
+      voice: cmd.input.enteredByVoice === true,
+      followUp: cmd.caseId !== null,
+      answersQuestion: cmd.input.answersReplyId ? true : false,
+    });
+    this.audit('village_device', 'consent_recorded', c.caseId, {
+      consentVersion: s.admin.consentVersion,
+    });
+    if (cmd.caseId && c.closed) {
+      c.closed = null;
+      this.audit('system', 'case_reopened_by_follow_up', c.caseId);
+    }
     this.onAccepted(msg);
     return { caseId: c.caseId, ref: c.ref, messageId: msg.messageId, version, duplicate: false };
   }
@@ -549,6 +638,14 @@ export class Engine {
     this.commit({ t: 'requeue', flowId });
   }
 
+  /** Operator action (permission-checked, audited). */
+  operatorRequeue(staff: StaffRef | null, flowId: string): void {
+    this.requireStaff(staff, 'operator.requeue');
+    if (!this.state.flows.some((f) => f.id === flowId))
+      throw new EngineError('not_found', 'Unknown flow', 404);
+    this.commit({ t: 'requeue', flowId, staff });
+  }
+
   private applyRequeue(flowId: string): void {
     const s = this.state;
     const f = s.flows.find((x) => x.id === flowId);
@@ -654,10 +751,39 @@ export class Engine {
     );
   }
 
-  private requireStaff(staff: { role: string } | null, roles: string[]): asserts staff is StaffRef {
+  /** Enforced in the service: the permission table decides, not the UI. */
+  private requireStaff(staff: StaffRef | null, permission: Permission): asserts staff is StaffRef {
     if (!staff) throw new EngineError('unauthorized', 'Staff sign-in required', 401);
-    if (!roles.includes(staff.role))
-      throw new EngineError('forbidden', `Role '${staff.role}' is not permitted to do this`, 403);
+    if (!can(staff.role, permission))
+      throw new EngineError(
+        'forbidden',
+        `Role '${staff.role}' is not permitted to do this (${permission})`,
+        403,
+      );
+  }
+
+  /** Audit trail: who did what to which case. Identifiers only, never names or message text. */
+  audit(
+    actor: StaffRef | 'village_device' | 'system',
+    action: string,
+    caseId: string | null,
+    detail?: AuditEvent['detail'],
+  ): void {
+    const s = this.state;
+    s.counters.audit += 1;
+    const ref = caseId ? s.cases.get(caseId)?.ref : undefined;
+    s.audit.push({
+      auditId: `aud-${s.counters.audit}`,
+      atTick: s.tick,
+      at: tickToIso(s.tick),
+      actor:
+        typeof actor === 'string'
+          ? { kind: actor }
+          : { kind: 'staff', role: actor.role, staffId: actor.staffId },
+      action,
+      ...(ref ? { caseRef: ref } : {}),
+      ...(detail ? { detail } : {}),
+    });
   }
 
   private clinicCase(caseId: string) {
@@ -677,7 +803,7 @@ export class Engine {
   }
 
   clinicInbox(staff: StaffRef | null, sort: 'oldest' | 'priority'): InboxItem[] {
-    this.requireStaff(staff, ['clinician', 'coordinator']);
+    this.requireStaff(staff, 'inbox.read');
     const s = this.state;
     const items: InboxItem[] = [];
     for (const c of s.cases.values()) {
@@ -706,6 +832,8 @@ export class Engine {
         userAction: tracks.userAction,
         exception: tracks.exception,
         versionCount: c.messageIds.length,
+        closed: c.closed,
+        overdue: this.overdueInfo(c) !== null,
       });
     }
     const rank = { urgent: 0, soon: 1, routine: 2 } as const;
@@ -723,7 +851,7 @@ export class Engine {
   }
 
   clinicCaseView(staff: StaffRef | null, caseId: string): ClinicCaseView {
-    this.requireStaff(staff, ['clinician', 'coordinator']);
+    this.requireStaff(staff, 'case.read_content');
     const s = this.state;
     const c = this.clinicCase(caseId);
     const messages: ClinicMessageView[] = [];
@@ -752,6 +880,9 @@ export class Engine {
       assignee: c.assignee,
       priority: c.priority,
       replies: c.replyIds.map((rid) => this.publicReply(s.replies.get(rid)!)),
+      conversation: this.conversationFor(c),
+      consent: s.consents.filter((k) => k.caseId === c.caseId),
+      closed: c.closed,
       replyDraft: c.replyDraft,
       nowTick: s.tick,
       nowIso: tickToIso(s.tick),
@@ -763,7 +894,7 @@ export class Engine {
   }
 
   markRead(staff: StaffRef | null, caseId: string): void {
-    this.requireStaff(staff, ['clinician', 'coordinator']);
+    this.requireStaff(staff, 'inbox.read');
     this.clinicCase(caseId);
     this.commit({ t: 'read', caseId });
   }
@@ -773,7 +904,7 @@ export class Engine {
   }
 
   claim(staff: StaffRef | null, caseId: string): void {
-    this.requireStaff(staff, ['clinician', 'coordinator']);
+    this.requireStaff(staff, 'case.claim');
     const c = this.clinicCase(caseId);
     if (c.assignee && c.assignee.staffId !== staff.staffId)
       throw new EngineError('conflict', `Already assigned to ${c.assignee.name}`, 409);
@@ -781,7 +912,7 @@ export class Engine {
   }
 
   startReview(staff: StaffRef | null, caseId: string): void {
-    this.requireStaff(staff, ['clinician', 'coordinator']);
+    this.requireStaff(staff, 'case.start_review');
     const c = this.clinicCase(caseId);
     if (c.assignee && c.assignee.staffId !== staff.staffId)
       throw new EngineError('conflict', `Assigned to ${c.assignee.name}`, 409);
@@ -795,6 +926,7 @@ export class Engine {
     const m = this.latestClinicMessage(caseId);
     const already = this.clinicEventsFor(m.messageId).some((e) => e.stage === 'care_in_review');
     if (already) return;
+    this.audit(staff, 'review_started', caseId);
     const ev = this.emit(m.messageId, 'care_in_review', 'clinic', { knownAtClinic: true });
     newFlow(this, 'status', m, DOWN, [ev.eventId]);
   }
@@ -805,7 +937,7 @@ export class Engine {
     level: StaffPriority['level'],
     reason: string,
   ): void {
-    this.requireStaff(staff, ['clinician', 'coordinator']);
+    this.requireStaff(staff, 'case.set_priority');
     this.clinicCase(caseId);
     if (!['routine', 'soon', 'urgent'].includes(level))
       throw new EngineError('bad_request', 'Invalid priority level', 400);
@@ -820,7 +952,7 @@ export class Engine {
     text: string,
     templateId: string | null,
   ): void {
-    this.requireStaff(staff, ['clinician', 'coordinator']);
+    this.requireStaff(staff, 'case.draft_reply');
     this.clinicCase(caseId);
     // A draft is NOT a reply: nothing is queued for return transport.
     this.commit({ t: 'reply_draft', caseId, staff, text: text.slice(0, 1000), templateId });
@@ -833,9 +965,14 @@ export class Engine {
   approveReply(
     staff: StaffRef | null,
     caseId: string,
-    input: { text: string; templateId: string | null; inReplyToMessageId: string },
+    input: {
+      text: string;
+      templateId: string | null;
+      inReplyToMessageId: string;
+      kind?: ReplyKind;
+    },
   ): ReplyView {
-    this.requireStaff(staff, ['clinician']);
+    this.requireStaff(staff, 'case.approve_reply');
     const c = this.clinicCase(caseId);
     const text = (input.text ?? '').trim();
     if (!text) throw new EngineError('bad_request', 'Reply text is required', 400);
@@ -846,6 +983,13 @@ export class Engine {
     const inReview = this.clinicEventsFor(m.messageId).some((e) => e.stage === 'care_in_review');
     if (!inReview)
       throw new EngineError('conflict', 'Start the review before approving a reply', 409);
+    const kind: ReplyKind = input.kind === 'clarification' ? 'clarification' : 'reply';
+    // Idempotent: approving identical content for the same message again returns the existing reply.
+    for (const rid of c.replyIds) {
+      const prev = this.state.replies.get(rid)!;
+      if (prev.messageId === m.messageId && prev.text === text && prev.kind === kind)
+        return this.publicReply(prev);
+    }
     return this.commit<ReplyView>({
       t: 'approve',
       caseId,
@@ -853,6 +997,7 @@ export class Engine {
       messageId: m.messageId,
       text,
       templateId: input.templateId ?? null,
+      kind,
     });
   }
 
@@ -868,6 +1013,7 @@ export class Engine {
       replyId: `reply-${s.counters.reply}`,
       caseId: c.caseId,
       inReplyToMessageId: m.messageId,
+      kind: cmd.kind ?? 'reply',
       version: c.replyIds.length + 1,
       text: cmd.text,
       textLanguage: 'en',
@@ -892,7 +1038,16 @@ export class Engine {
     s.replies.set(rec.replyId, rec);
     c.replyIds.push(rec.replyId);
     c.replyDraft = null;
-    const ev = this.emit(m.messageId, 'reply_approved', 'clinic', { knownAtClinic: true });
+    const ev = this.emit(m.messageId, 'reply_approved', 'clinic', {
+      knownAtClinic: true,
+      ...(rec.kind === 'clarification' ? { detail: { note: 'clarification_question' } } : {}),
+    });
+    this.audit(
+      cmd.staff,
+      rec.kind === 'clarification' ? 'clarification_approved' : 'reply_approved',
+      c.caseId,
+      { replyId: rec.replyId, template: cmd.templateId },
+    );
     newFlow(this, 'reply', m, DOWN, [ev.eventId], rec.replyId);
     return this.publicReply(rec);
   }
@@ -920,6 +1075,10 @@ export class Engine {
     if (!reply || reply.openedTick !== null) return;
     reply.openedTick = s.tick;
     c.replyOpenedAssistedBy = assistedBy;
+    this.audit('village_device', 'reply_opened', caseId, {
+      assistedReading: assistedBy !== null,
+      kind: reply.kind,
+    });
     const m = s.messages.get(reply.messageId)!;
     const ev = this.emit(m.messageId, 'reply_opened', 'village', {
       knownAtNode: true,
@@ -941,7 +1100,14 @@ export class Engine {
     const m = s.messages.get(mid)!;
     if (m.withdrawn) return;
     m.withdrawn = true;
-    const ev = this.emit(mid, 'withdrawn', 'village', { knownAtNode: true });
+    // Cancel is only possible while custody has not left the village node. After that this is a
+    // withdrawal NOTICE; copies already forwarded cannot be erased remotely.
+    const left = s.flows.some(
+      (f) => f.kind === 'request' && f.messageId === mid && f.hops[0]!.delivered,
+    );
+    const note = left ? 'withdrawal_after_forwarding' : 'cancelled_before_custody';
+    this.audit('village_device', left ? 'withdrawal_notice' : 'request_cancelled', caseId);
+    const ev = this.emit(mid, 'withdrawn', 'village', { knownAtNode: true, detail: { note } });
     // Stop sending from this device if the first hop has not yet delivered. Copies already
     // forwarded cannot be erased; tell the clinic so it does not act on a withdrawn request.
     for (const f of s.flows) {
@@ -953,9 +1119,280 @@ export class Engine {
     newFlow(this, 'status', m, UP, [ev.eventId]);
   }
 
+  // ================================================================== coverage, handover, closure
+  /** A case is open at the clinic until closed; closed cases reopen if the patient follows up. */
+  private isOpenCase(c: CaseRec): boolean {
+    return !c.closed && c.messageIds.some((id) => this.state.messages.get(id)?.clinicHasCopy);
+  }
+
+  private hasApprovedReplyFor(c: CaseRec, m: MessageRec): boolean {
+    return c.replyIds.some((rid) => this.state.replies.get(rid)!.messageId === m.messageId);
+  }
+
+  /** Waiting beyond the review window with no approved reply for the latest clinic-held message. */
+  private overdueInfo(c: CaseRec): { waitingTicks: number; overdueByTicks: number } | null {
+    if (!this.isOpenCase(c)) return null;
+    const m = this.latestClinicMessage(c.caseId);
+    if (this.hasApprovedReplyFor(c, m)) return null;
+    const waiting = this.state.tick - (m.clinicReceivedTick ?? this.state.tick);
+    const window = this.state.admin.reviewWindowTicks;
+    return waiting > window ? { waitingTicks: waiting, overdueByTicks: waiting - window } : null;
+  }
+
+  /** Staffing is a STATEMENT by a coordinator, never inferred. Stale statements say so. */
+  coverage(staff: StaffRef | null): CoverageView {
+    this.requireStaff(staff, 'coverage.read');
+    const s = this.state;
+    const STALE_AFTER = 4 * 60;
+    const cov = s.coverage;
+    const age = cov.statedAtTick === null ? null : s.tick - cov.statedAtTick;
+    const stale = age === null || age > STALE_AFTER;
+    const cases = [...s.cases.values()].filter((c) =>
+      c.messageIds.some((id) => s.messages.get(id)?.clinicHasCopy),
+    );
+    const withContent = can(staff.role, 'inbox.read');
+    const overdue = withContent
+      ? cases.flatMap((c) => {
+          const o = this.overdueInfo(c);
+          return o ? [{ caseId: c.caseId, ref: c.ref, ...o, assignee: c.assignee }] : [];
+        })
+      : [];
+    const overdueCount = cases.filter((c) => this.overdueInfo(c) !== null).length;
+    return {
+      simulated: true,
+      nowTick: s.tick,
+      staffed: cov.staffed,
+      statedAtTick: cov.statedAtTick,
+      statedBy: cov.statedBy,
+      note: cov.note,
+      statementAgeTicks: age,
+      stale,
+      staleAfterTicks: STALE_AFTER,
+      displayLabel:
+        cov.statedAtTick === null
+          ? 'No staffing statement has been recorded. Do not assume the clinic is staffed.'
+          : `${cov.staffed ? 'Clinic stated open' : 'Clinic stated NOT staffed'} at tick ${cov.statedAtTick}${
+              stale
+                ? `, ${age} simulated minutes ago. This is a stale statement, not live staffing evidence.`
+                : `, ${age} simulated minutes ago (a statement, not live evidence).`
+            }`,
+      serviceHours: s.admin.serviceHours,
+      reviewWindowTicks: s.admin.reviewWindowTicks,
+      open: cases.filter((c) => this.isOpenCase(c)).length,
+      closed: cases.filter((c) => c.closed).length,
+      overdueCount,
+      overdue,
+      handovers: s.handovers.map((h) => ({
+        handoverId: h.handoverId,
+        atTick: h.atTick,
+        from: h.from,
+        toStaffId: h.toStaffId,
+        toName: h.toName,
+        caseRef: h.caseRef,
+        note: h.note,
+      })),
+    };
+  }
+
+  setCoverage(staff: StaffRef | null, staffed: boolean, note: string): void {
+    this.requireStaff(staff, 'coverage.set');
+    this.commit({
+      t: 'coverage_set',
+      staff,
+      staffed: staffed === true,
+      note: note.trim().slice(0, 300),
+    });
+  }
+
+  /** Coordinator reassigns a case to another clinic reviewer. Recorded as an audit event. */
+  handover(staff: StaffRef | null, caseId: string, toStaffId: string, note: string): void {
+    this.requireStaff(staff, 'case.handover');
+    this.clinicCase(caseId);
+    const target = Object.values(FIXTURE_STAFF).find(
+      (p) => p.staffId === toStaffId && p.role === 'clinician',
+    );
+    if (!target)
+      throw new EngineError('bad_request', 'Handover target must be a clinic reviewer', 400);
+    if (!note.trim()) throw new EngineError('bad_request', 'A handover note is required', 400);
+    this.commit({
+      t: 'handover',
+      staff,
+      caseId,
+      toStaffId: target.staffId,
+      toName: target.name,
+      note: note.trim().slice(0, 300),
+    });
+  }
+
+  private applyHandover(cmd: Extract<Command, { t: 'handover' }>): void {
+    const s = this.state;
+    const c = s.cases.get(cmd.caseId)!;
+    const target = Object.values(FIXTURE_STAFF).find((p) => p.staffId === cmd.toStaffId);
+    if (target)
+      c.assignee = {
+        staffId: target.staffId,
+        name: target.name,
+        role: target.role,
+        clinic: target.clinic,
+      };
+    s.counters.handover += 1;
+    s.handovers.push({
+      handoverId: `handover-${s.counters.handover}`,
+      atTick: s.tick,
+      from: cmd.staff,
+      toStaffId: cmd.toStaffId,
+      toName: cmd.toName,
+      caseId: c.caseId,
+      caseRef: c.ref,
+      note: cmd.note,
+    });
+    this.audit(cmd.staff, 'case_handover', c.caseId, { to: cmd.toStaffId });
+  }
+
+  /** Closing is administrative. It asserts NO health outcome. */
+  closeCase(staff: StaffRef | null, caseId: string, outcome: CloseOutcome, note: string): void {
+    this.requireStaff(staff, 'case.close');
+    this.clinicCase(caseId);
+    if (!(CLOSE_OUTCOMES as readonly string[]).includes(outcome))
+      throw new EngineError('bad_request', 'An explicit close outcome is required', 400);
+    this.commit({
+      t: 'close_case',
+      staff,
+      caseId,
+      outcome,
+      note: (note ?? '').trim().slice(0, 300),
+    });
+  }
+
+  private applyClose(cmd: Extract<Command, { t: 'close_case' }>): void {
+    const c = this.state.cases.get(cmd.caseId)!;
+    const closure: CaseClosure = {
+      outcome: cmd.outcome,
+      note: cmd.note,
+      by: cmd.staff,
+      atTick: this.state.tick,
+      statement:
+        'Administrative closure only. This records how the clinic handled the message; it does not state any health outcome.',
+    };
+    c.closed = closure;
+    this.audit(cmd.staff, 'case_closed', c.caseId, { outcome: cmd.outcome });
+  }
+
+  // ================================================================== gateway, node health, audit, admin
+  gateway(staff: StaffRef | null): GatewayStatus {
+    this.requireStaff(staff, 'gateway.read');
+    return gatewayStatus(this.state);
+  }
+
+  /** Village node health indicators. No clinical content; readable on the village device. */
+  nodeHealth(): NodeHealth {
+    const s = this.state;
+    const waiting = s.flows.filter((f) => f.kind === 'request' && !f.done && !f.hops[0]!.delivered);
+    const lastSync = s.lastContact['relay-ridge'] ?? null;
+    return {
+      simulated: true,
+      nowTick: s.tick,
+      nowIso: tickToIso(s.tick),
+      availability: {
+        up: this.nodeUp,
+        downUntilTick: this.nodeUp ? null : s.nodeDownUntil,
+      },
+      storage: this.storage(),
+      queue: {
+        waitingToSend: waiting.length,
+        oldestAgeTicks: waiting.length
+          ? s.tick - Math.min(...waiting.map((f) => s.messages.get(f.messageId)!.acceptedTick))
+          : null,
+      },
+      radioAdapter: {
+        name: 'simulated radio adapter (no real radio)',
+        status: s.links[0] ? 'simulated_link_up' : 'simulated_link_down',
+      },
+      lastSync: {
+        tick: lastSync,
+        note:
+          lastSync === null
+            ? 'Never heard from the first relay.'
+            : 'Last time the first relay acknowledged this node (simulated clock).',
+      },
+      clock: { quality: CLOCK_QUALITY.village },
+      storageLayout: {
+        sensitiveCases:
+          'journal file in the data directory (plaintext in this prototype; no at-rest encryption)',
+        assetCache: 'built UI files served read-only from dist/ (no case data)',
+      },
+    };
+  }
+
+  auditTrail(staff: StaffRef | null): AuditEvent[] {
+    this.requireStaff(staff, 'audit.read');
+    return this.state.audit.slice(-500);
+  }
+
+  adminConfig(staff: StaffRef | null): AdminConfig {
+    this.requireStaff(staff, 'admin.config.read');
+    return { ...this.state.admin };
+  }
+
+  updateAdminConfig(staff: StaffRef | null, patch: Partial<AdminConfig>): AdminConfig {
+    this.requireStaff(staff, 'admin.config.write');
+    const clean: Partial<AdminConfig> = {};
+    if (typeof patch.consentVersion === 'string' && /^[\w.-]{1,40}$/.test(patch.consentVersion))
+      clean.consentVersion = patch.consentVersion;
+    if (typeof patch.serviceHours === 'string')
+      clean.serviceHours = patch.serviceHours.slice(0, 120);
+    if (typeof patch.facility === 'string') clean.facility = patch.facility.slice(0, 120);
+    if (
+      Number.isInteger(patch.reviewWindowTicks) &&
+      patch.reviewWindowTicks! >= 1 &&
+      patch.reviewWindowTicks! <= 20000
+    )
+      clean.reviewWindowTicks = patch.reviewWindowTicks!;
+    if (
+      Number.isInteger(patch.retentionDays) &&
+      patch.retentionDays! >= 1 &&
+      patch.retentionDays! <= 3650
+    )
+      clean.retentionDays = patch.retentionDays!;
+    if (Object.keys(clean).length === 0)
+      throw new EngineError('bad_request', 'No valid configuration fields supplied', 400);
+    this.commit({ t: 'admin_config', staff, patch: clean });
+    return { ...this.state.admin };
+  }
+
+  /** Chronological conversation under a case, for the clinic (patient messages and approved replies). */
+  private conversationFor(c: CaseRec): ConversationItem[] {
+    const s = this.state;
+    const items: ConversationItem[] = [];
+    for (const id of c.messageIds) {
+      const m = s.messages.get(id)!;
+      if (!m.clinicHasCopy) continue;
+      items.push({
+        kind: 'patient_message',
+        id,
+        atTick: m.clinicReceivedTick ?? m.acceptedTick,
+        text: m.input.details,
+        language: m.input.language,
+        linkedTo: m.input.answersReplyId ?? m.supersedes,
+      });
+    }
+    for (const rid of c.replyIds) {
+      const r = s.replies.get(rid)!;
+      items.push({
+        kind: r.kind === 'clarification' ? 'clinic_question' : 'clinic_reply',
+        id: rid,
+        atTick: r.approvedAtTick,
+        text: r.text,
+        language: r.textLanguage,
+        linkedTo: r.inReplyToMessageId,
+      });
+    }
+    return items.sort((a, b) => a.atTick - b.atTick || a.id.localeCompare(b.id));
+  }
+
   // ================================================================== operator
   operatorOverview(staff: StaffRef | null): OperatorOverview {
-    this.requireStaff(staff, ['operator']);
+    this.requireStaff(staff, 'operator.overview');
     const s = this.state;
     const labels: Record<NodeId, string> = {
       village: 'Ondera village node (simulated)',

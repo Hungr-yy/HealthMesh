@@ -1,4 +1,8 @@
 import type {
+  AdminConfig,
+  AuditEvent,
+  CaseClosure,
+  ConsentRecord,
   ClinicMessageView,
   EventStage,
   NodeId,
@@ -114,6 +118,7 @@ export interface CaseRec {
   } | null;
   replyIds: string[];
   replyOpenedAssistedBy: string | null;
+  closed: CaseClosure | null;
 }
 
 export interface ReplyRec extends ReplyView {
@@ -122,6 +127,43 @@ export interface ReplyRec extends ReplyView {
   deliveredToClinicTick: number | null;
   openedTick: number | null;
 }
+
+export interface GatewayInboxRec {
+  messageId: string;
+  receivedTick: number;
+  forwardedTick: number | null;
+}
+export interface GatewayOutboxRec {
+  replyId: string;
+  messageId: string;
+  enqueuedTick: number;
+  sentTick: number | null;
+  deliveredTick: number | null;
+}
+export interface CoverageRec {
+  staffed: boolean;
+  statedAtTick: number | null;
+  statedBy: StaffRef | null;
+  note: string;
+}
+export interface HandoverRec {
+  handoverId: string;
+  atTick: number;
+  from: StaffRef;
+  toStaffId: string | null;
+  toName: string;
+  caseId: string;
+  caseRef: string;
+  note: string;
+}
+
+export const DEFAULT_ADMIN: AdminConfig = {
+  consentVersion: 'consent-v1',
+  serviceHours: 'Mon-Fri 08:00-16:00 (demo setting, synthetic)',
+  reviewWindowTicks: 24 * 60,
+  retentionDays: 30,
+  facility: 'Ondera Health Post (synthetic)',
+};
 
 export interface State {
   tick: number;
@@ -143,8 +185,23 @@ export interface State {
   seq: Map<string, number>;
   flows: Flow[];
   replies: Map<string, ReplyRec>;
-  counters: { event: number; flow: number; case: number; reply: number };
+  counters: {
+    event: number;
+    flow: number;
+    case: number;
+    reply: number;
+    audit: number;
+    consent: number;
+    handover: number;
+  };
   journalBytes: number;
+  /** Gateway module state: its own inbox and outbox, independent of the clinic's records. */
+  gateway: { inbox: Map<string, GatewayInboxRec>; outbox: Map<string, GatewayOutboxRec> };
+  consents: ConsentRecord[];
+  audit: AuditEvent[];
+  coverage: CoverageRec;
+  handovers: HandoverRec[];
+  admin: AdminConfig;
   nodeLog: Array<{
     tick: number;
     kind: 'power_cut' | 'power_restored';
@@ -173,8 +230,14 @@ export function newState(): State {
     seq: new Map(),
     flows: [],
     replies: new Map(),
-    counters: { event: 0, flow: 0, case: 0, reply: 0 },
+    counters: { event: 0, flow: 0, case: 0, reply: 0, audit: 0, consent: 0, handover: 0 },
     journalBytes: 0,
+    gateway: { inbox: new Map(), outbox: new Map() },
+    consents: [],
+    audit: [],
+    coverage: { staffed: true, statedAtTick: null, statedBy: null, note: '' },
+    handovers: [],
+    admin: { ...DEFAULT_ADMIN },
     nodeLog: [],
   };
 }

@@ -46,6 +46,20 @@ export const FIXTURE_STAFF = {
     role: 'clinician' as const,
     clinic: 'Ondera Health Post (synthetic)',
   },
+  clinician2: {
+    token: 'demo-token-clinician-baraka',
+    staffId: 'staff-baraka',
+    name: 'Dr. Baraka (synthetic)',
+    role: 'clinician' as const,
+    clinic: 'Ondera Health Post (synthetic)',
+  },
+  admin: {
+    token: 'demo-token-admin-zawadi',
+    staffId: 'admin-zawadi',
+    name: 'Zawadi, deployment administrator (synthetic)',
+    role: 'admin' as const,
+    clinic: 'Ondera Health Post (synthetic)',
+  },
   coordinator: {
     token: 'demo-token-coordinator-juma',
     staffId: 'staff-juma',
@@ -113,6 +127,7 @@ function ev(
 
 export const FIXTURE_REPLY: Omit<ReplyView, 'caseId' | 'inReplyToMessageId'> = {
   replyId: 'fx-reply-1',
+  kind: 'reply',
   version: 1,
   text: 'Please come to the clinic on Thursday morning for your follow-up. Bring your health card.',
   textLanguage: 'en',

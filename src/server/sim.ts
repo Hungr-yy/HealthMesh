@@ -1,6 +1,13 @@
 import { fnv1a } from '@shared/ids';
 import { NODE_PATH, type EventStage, type TransportEvent } from '@shared/types';
 import type { Engine } from './engine';
+import {
+  gatewayForwarded,
+  gatewayInbound,
+  gatewayOutboundDelivered,
+  gatewayOutboundEnqueued,
+  gatewayOutboundSent,
+} from './gateway';
 import type { Flow, FlowKind, MessageRec } from './state';
 
 /**
@@ -185,15 +192,22 @@ function onDelivered(e: Engine, flow: Flow, j: number): void {
     if (bIdx === 1 || bIdx === 2) {
       e.emit(msg.messageId, 'relaying', node, { detail: hopDetail });
     } else if (bIdx === 3) {
+      gatewayInbound(s, msg.messageId);
       const ev = e.emit(msg.messageId, 'gateway_received', 'gateway', { detail: hopDetail });
       newFlow(e, 'status', msg, [3, 2, 1, 0], [ev.eventId]);
     } else if (bIdx === 4) {
+      gatewayForwarded(s, msg.messageId);
       if (msg.clinicHasCopy) return;
       e.deliverToClinic(msg, hopDetail);
     }
     return;
   }
 
+  if (flow.kind === 'reply' && flow.replyId) {
+    // Reply flow is clinic -> gateway -> valley -> ridge -> village.
+    if (bIdx === 3) gatewayOutboundEnqueued(s, flow.replyId, flow.messageId);
+    if (bIdx === 2) gatewayOutboundSent(s, flow.replyId);
+  }
   if (!last) return;
   if (flow.kind === 'status') {
     for (const id of flow.carries) {
@@ -204,6 +218,7 @@ function onDelivered(e: Engine, flow: Flow, j: number): void {
     return;
   }
   // reply flow arrived at the village node
+  if (flow.replyId) gatewayOutboundDelivered(s, flow.replyId);
   e.onReplyArrived(flow);
 }
 
