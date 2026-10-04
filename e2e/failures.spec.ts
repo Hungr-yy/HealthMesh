@@ -155,6 +155,9 @@ for (const vp of VIEWPORTS) {
       await simPost(page, 'link', { index: 0, up: false });
       await toReview(page);
       await page.getByTestId('send-request').click();
+      // wait until the node has accepted it: on a remote target the click's request can
+      // otherwise arrive after the simulator advance below
+      await expect(page.getByTestId('patient-root')).toHaveAttribute('data-screen', 'receipt');
       await simPost(page, 'advance', { ticks: 31 });
       await expect(page.getByTestId('exc-expired')).toBeVisible({ timeout: 15_000 });
       await checked(page, vp, '45-fail-expired');
@@ -183,6 +186,7 @@ for (const vp of VIEWPORTS) {
       await simPost(page, 'config', { lossPct: 100, maxRetries: 3 });
       await toReview(page);
       await page.getByTestId('send-request').click();
+      await expect(page.getByTestId('patient-root')).toHaveAttribute('data-screen', 'receipt');
       await simPost(page, 'advance', { ticks: 120 });
       await expect(page.getByTestId('exc-intervention')).toBeVisible({ timeout: 15_000 });
       await checked(page, vp, '46-fail-intervention-required');
@@ -197,6 +201,7 @@ for (const vp of VIEWPORTS) {
       const { ctx, page } = await open(browser);
       await toReview(page);
       await page.getByTestId('send-request').click();
+      await expect(page.getByTestId('patient-root')).toHaveAttribute('data-screen', 'receipt');
       await simPost(page, 'advance', { ticks: 100 });
       await expect(page.getByTestId('tracks')).toContainText('Waiting for clinic review', {
         timeout: 15_000,
