@@ -1,0 +1,8 @@
+dist
+data
+.e2e-data
+node_modules
+package-lock.json
+docs/screenshots
+test-results
+playwright-report
