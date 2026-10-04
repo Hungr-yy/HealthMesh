@@ -16,7 +16,7 @@ Environment: Linux, Node v20.19.2, headless Chromium via Playwright, TypeScript 
 
 ## 2. Unit and service tests (FACT): `npm test`
 
-**7 files, 84 tests, 84 passed, 0 failed** (Vitest, about 2 s).
+**8 files, 88 tests, 88 passed, 0 failed** (Vitest, about 2 s).
 
 | File                              | Tests | Covers                                                                                                                                                                                                                                                                                                                                                                                            |
 | --------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -26,13 +26,14 @@ Environment: Linux, Node v20.19.2, headless Chromium via Playwright, TypeScript 
 | `tests/relay.test.ts`             |    18 | full journey; restart; power interruption; lost ack and lost submission response; duplicate delivery at the clinic hop; reordered acks; outage then restore; bounded retry; expiry and linked resubmission; patient isolation; **reply unsent until clinician approval**; translation failure; operator view has no content                                                                       |
 | `tests/api.test.ts`               |     6 | HTTP role checks on a real service process (clinic, operator, Stage A endpoints), typed storage-full / node-unavailable errors, malformed and oversize input, `RHR_SIM_CONTROLS=off` removes every simulator endpoint                                                                                                                                                                             |
 | `tests/speech.test.ts`            |    14 | voice: adapter feature detection and error mapping, deterministic mock scenarios, locale per language, voice flag survives the codec                                                                                                                                                                                                                                                              |
+| `tests/hosted.test.ts`            |     4 | hosted-demo mode: the Vercel serverless entry called with a raw Node request (and with a platform-pre-parsed body) reports hosted mode with the exact banner wording, keeps simulator state across requests on a warm instance, and rejects malformed JSON / unknown routes                                                                                                                       |
 | `tests/stage-a.test.ts`           |    22 | gateway inbox/outbox with independent radio and upstream outages (and restart); permission table and unauthorized access (operator/admin never read clinical content); clarification link validation and idempotent approval; correction/withdrawal; coverage, overdue, handover, closure; consent records; audit events hold no names or text; admin config; node health; capability doc in sync |
 
 ## 3. Browser tests (FACT): `npm run test:e2e`
 
 Real service + built UI, headless Chromium, two viewports (320x640 and 1280x800), each full run starting from a fresh data directory.
 
-**67 tests, 67 passed, 0 failed** (about 2.5 min), one full run on 2026-10-04 that produced the committed screenshots and axe file.
+**68 tests, 68 passed, 0 failed** (about 2.5 min), one full run on 2026-10-04 that produced the committed screenshots and axe file.
 
 | Spec                       | Tests | Covers                                                                                                                                                                                                                                                                                              |
 | -------------------------- | ----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -42,6 +43,7 @@ Real service + built UI, headless Chromium, two viewports (320x640 and 1280x800)
 | `accessibility.spec.ts`    |     4 | 200% text at 320px, focus placement, visible focus ring, no animation, live region, RTL attributes                                                                                                                                                                                                  |
 | `phase1-fixtures.spec.ts`  |     2 | keyboard-operable flow on static fixtures, 48x48 px primary targets                                                                                                                                                                                                                                 |
 | `voice.spec.ts`            |    19 | voice input against a scripted FAKE Web Speech API: consent line, keyboard and 48 px targets, decline, unsupported, permission denied, mid-capture error, Arabic RTL, Swahili locale, 200% text at 320px                                                                                            |
+| `hosted.spec.ts`           |     1 | the hosted-demo banner is shown on every view exactly when the service reports hosted mode, never in the local build or on fixtures; SIMULATION banner always                                                                                                                                       |
 | `spec-demo.spec.ts`        |     2 | **spec section 15 demo**, both viewports: accepted while upstream is down, service restart, gateway ack without clinic ack, operator gateway panel, injected duplicate produces ONE case, clinician approval, return-path interruption and recovery, operator view has no patient text, device lock |
 | `stage-a-ui.spec.ts`       |     6 | clarification question and linked answer in one conversation, coverage statement and overdue badge, handover, closure with explicit outcome, admin settings change in the audit trail, permission table, capability and language matrices                                                           |
 
@@ -85,7 +87,21 @@ INFERENCE: with assumed 128-byte frames and 8-byte overhead, a Noor English requ
 - **Staffing and overdue.** Coverage is a stated value; the overdue flag compares simulated age to a configured review window. No real rota, calendar or escalation exists.
 - **Videos.** The three submission videos are screen recordings of the simulator driven by a script (`scripts/record-videos.ts`); they show scripted behaviour, not user research.
 
-## 7. Reproduce
+## 7. Hosted demo (FACT for what was run; UNKNOWN for real hosts)
+
+Hosted demo mode = the same service and synthetic data, a banner on every screen, journal in the temp directory. Nothing was deployed or pushed. See [docs/DEPLOY.md](docs/DEPLOY.md).
+
+| Target (run on this machine)                                                                                                                                                 | Result                                                                                                          |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `RHR_E2E_TARGET=hosted`: bundled single Node server (`dist-server/server.mjs`, what the Docker image runs)                                                                   | full Playwright suite 67 of 67 passed; `hosted.spec` 1 of 1 passed separately                                   |
+| `RHR_E2E_TARGET=vercel-sim`: `.vercel/output` served by a Node stand-in for the platform router, function called with raw Node req/res                                       | full suite 68 of 68 passed (incl. Noor journey, spec section 15 demo, Stage A UI, axe on every recorded screen) |
+| Image emulation: only `dist/` + `dist-server/` copied to an empty directory, no `node_modules`, started with the Dockerfile's environment (`PORT=10000`, `RHR_HOST=0.0.0.0`) | `noor-journey`, `spec-demo`, `stage-a-ui`, `hosted` specs: 11 of 11 passed                                      |
+
+- **UNKNOWN / not run:** the Dockerfile was **not built** (no Docker on this machine); the Render Blueprint and `vercel.json` were **not exercised** on Render or Vercel; `vercel dev` / `vercel build` were not run (no account or login used). The Vercel route (`/api/*` to the function keeping the original `req.url`) is the documented platform behaviour, not something observed here.
+- **Limitation (FACT by design):** on a hosted URL, state lives in one instance's temp disk or memory. It resets on redeploy, idle spin-down or cold start, and on Vercel separate warm instances do not share state, so a multi-step flow can lose its case mid-demo. Restart durability is therefore demonstrated in the local build and tests (including a real-process SIGKILL test), not on the hosted URL.
+- The simulator endpoints are unauthenticated on the public URL (anyone can reset or advance the shared demo).
+
+## 8. Reproduce
 
 ```bash
 npm ci && npx playwright install chromium
@@ -93,6 +109,8 @@ npm run check && npm run test:e2e
 npm run evidence:bytes && npm run evidence:contrast
 ```
 
-Run note: the full Playwright suite passed 67 of 67 in the run that produced the committed screenshots and axe file. An earlier 40-test suite (before voice and Stage A) passed twice back to back; the 67-test suite has been run in full once.
+Run note: the full Playwright suite passed (see section 3) in the run that produced the committed screenshots and axe file. An earlier 40-test suite (before voice and Stage A) passed twice back to back; the 68-test suite has been run in full once on the local target.
+
+Hosted targets: `RHR_E2E_TARGET=hosted|vercel-sim RHR_E2E_OUT=/tmp/out npx playwright test`.
 
 Regenerate docs: `npm run docs:capabilities`. Re-record videos: `npm run build:web && npx tsx scripts/record-videos.ts`.

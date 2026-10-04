@@ -13,6 +13,10 @@
 
 This repo implements the **P0 "Noor" vertical flow** plus the Stage A product-spec items listed below, against a deterministic relay simulator and a real local service with a durable write-ahead journal.
 
+## Live demo
+
+**Live demo URL: _not deployed yet_ (placeholder: `https://TODO-DEMO-URL`).** The hosted demo runs this same simulated service with synthetic data and a banner on every screen: _"Hosted demo: state may reset; durable journal is demonstrated in the local build and tests"_. The whole Noor journey (patient, clinic approval, operator view, simulator controls) works there, but state is ephemeral and shared by all visitors, so restart-durability is demonstrated in the local build and tests, not on the hosted URL. Deploy options (Docker/Render recommended, Vercel best effort) and exact steps: [docs/DEPLOY.md](docs/DEPLOY.md).
+
 ## Quick start
 
 Requires Node 20+.
@@ -24,13 +28,14 @@ npm run dev        # local service :8787 + web UI :5173  -> open http://localhos
 npm start          # http://127.0.0.1:8787
 ```
 
-| Command                     | Purpose                                                           |
-| --------------------------- | ----------------------------------------------------------------- |
-| `npm run check`             | typecheck + lint + format check + Vitest                          |
-| `npm test`                  | Vitest: logic, durability (incl. SIGKILL), relay simulator, API   |
-| `npm run test:e2e`          | Builds, starts the real service, Playwright + axe at 320px/1280px |
-| `npm run evidence:bytes`    | Regenerates `docs/measurements/request-bytes.md`                  |
-| `npm run evidence:contrast` | Regenerates `docs/measurements/contrast.md`                       |
+| Command                                 | Purpose                                                                                        |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `npm run check`                         | typecheck + lint + format check + Vitest                                                       |
+| `npm test`                              | Vitest: logic, durability (incl. SIGKILL), relay simulator, API                                |
+| `npm run test:e2e`                      | Builds, starts the real service, Playwright + axe at 320px/1280px                              |
+| `npm run build:server` / `build:vercel` | Hosted-demo bundles (single Node server / Vercel output); see [docs/DEPLOY.md](docs/DEPLOY.md) |
+| `npm run evidence:bytes`                | Regenerates `docs/measurements/request-bytes.md`                                               |
+| `npm run evidence:contrast`             | Regenerates `docs/measurements/contrast.md`                                                    |
 
 Useful views: patient app `#/`, clinic `#/clinic`, operator `#/operator`, relay simulator `#/sim` (advance virtual time, cut links/power, restart the node, inject lost acks). `?fixtures=1` runs the patient UI on static fixtures with no service.
 
