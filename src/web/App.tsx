@@ -5,6 +5,7 @@ import type { LangCode } from '@shared/types';
 import { SimulationBanner, UnreviewedBanner } from './components/Chrome';
 import { AnnounceProvider, Button } from './components/ui';
 import { FixtureClient } from './lib/fixtureClient';
+import { HttpClient } from './lib/httpClient';
 import { DeviceSession } from './lib/session';
 import { PatientApp } from './screens/PatientApp';
 
@@ -25,7 +26,7 @@ export function App() {
   const useFixtures = params.get('fixtures') === '1';
 
   const fixture = useMemo(() => (useFixtures ? new FixtureClient() : null), [useFixtures]);
-  const client: HealthMessagingClient = fixture as HealthMessagingClient;
+  const client: HealthMessagingClient = useMemo(() => fixture ?? new HttpClient(''), [fixture]);
   const device = useMemo(() => new DeviceSession(window.sessionStorage, window.localStorage), []);
   const onLanguage = useCallback((l: LangCode | null) => setLang(l), []);
 
