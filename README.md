@@ -15,7 +15,7 @@ This repo implements the **P0 "Noor" vertical flow** plus the Stage A product-sp
 
 ## Live demo
 
-**Live demo URL: _not deployed yet_ (placeholder: `https://TODO-DEMO-URL`).** The hosted demo runs this same simulated service with synthetic data and a banner on every screen: _"Hosted demo: state may reset; durable journal is demonstrated in the local build and tests"_. The whole Noor journey (patient, clinic approval, operator view, simulator controls) works there, but state is ephemeral and shared by all visitors, so restart-durability is demonstrated in the local build and tests, not on the hosted URL. Deploy options (Docker/Render recommended, Vercel best effort) and exact steps: [docs/DEPLOY.md](docs/DEPLOY.md).
+**Live demo: <https://rural-health-radio.vercel.app>** The hosted demo runs this same simulated service with synthetic data and a banner on every screen: _"Hosted demo: state may reset; durable journal is demonstrated in the local build and tests"_. The whole Noor journey (patient, clinic approval, operator view, simulator controls) works there, but state is one shared demo state for all visitors (a database-backed command log, resettable from `#/sim`), so restart-durability and the on-disk journal are demonstrated in the local build and tests, not on the hosted URL. Deploy options (Vercel with a shared database log, or Docker/Render) and exact steps: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Quick start
 

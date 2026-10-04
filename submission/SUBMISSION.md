@@ -7,7 +7,7 @@
 
 ## Links
 
-- **Working demo link:** TODO - `https://TODO-DEMO-URL` (not deployed yet; deploy steps in [`docs/DEPLOY.md`](../docs/DEPLOY.md)). The hosted demo shows the banner "Hosted demo: state may reset; durable journal is demonstrated in the local build and tests".
+- **Working demo link:** <https://rural-health-radio.vercel.app> (deploy steps in [`docs/DEPLOY.md`](../docs/DEPLOY.md)). The hosted demo shows the banner "Hosted demo: state may reset; durable journal is demonstrated in the local build and tests".
 - **Repository:** https://github.com/Hungr-yy/HealthMesh
 - **Videos:** `team-intro.mp4`, `demo.mp4`, `teach.mp4` in this folder.
 
@@ -65,16 +65,16 @@ TypeScript 6, React 19, Vite 8, Node 20 (plain `http` service, JSON-lines journa
 ## Measured results (from [`VERIFICATION.md`](../VERIFICATION.md); simulator and local service on a development machine, 2026-10-04)
 
 - **FACT:** `tsc --noEmit` 0 errors; ESLint 0 errors and 0 warnings; Prettier clean.
-- **FACT:** Vitest **88 of 88 passed** (8 files), including a real-process SIGKILL durability test, simulator fault tests, unauthorized-access tests and gateway outage tests.
+- **FACT:** Vitest **93 of 93 passed** (9 files), including a real-process SIGKILL durability test, simulator fault tests, unauthorized-access tests and gateway outage tests.
 - **FACT:** Playwright **68 of 68 passed** (2 viewports, 320x640 and 1280x800), including the full scripted demo (`e2e/spec-demo.spec.ts`).
 - **FACT:** axe-core **142 scans over 71 screens x 2 viewports, 0 violations**. Limit: axe finds only a subset of accessibility problems; screen readers and real devices are UNKNOWN.
 - **FACT:** encoded request size for the Noor English example: 389 bytes as JSON, 135 bytes with the prototype codec, 118 bytes with codec plus deflate (no encryption, FEC or framing; conditions in `docs/measurements/request-bytes.md`).
 - **INFERENCE (assumptions stated there):** with assumed 128-byte frames and a 1200 bps link, that request fits in 2 frames, about 1.0 s. Not an RF measurement.
 - **UNKNOWN:** everything about real users, real radios, real clinics, clinical safety, security review, and real-browser speech accuracy.
 
-## Live demo (placeholder)
+## Live demo
 
-TODO after deployment: paste the public URL here and in the README. Hosted mode is the same simulated service with synthetic data; state is in memory/ephemeral and shared by all visitors, so restart-durability is shown in the local build and tests rather than on the hosted URL.
+<https://rural-health-radio.vercel.app> - the same simulated service with synthetic data and a banner on every screen. State is one shared, resettable demo state for all visitors, kept in a database-backed command log; restart-durability of the on-disk journal is shown in the local build and tests rather than on the hosted URL.
 
 ## Run it
 
